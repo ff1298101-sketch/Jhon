@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M24,20h60c6.6,0 12,5.4 12,12v44c0,6.6 -5.4,12 -12,12H44l-16,14v-14H24c-6.6,0 -12,-5.4 -12,-12V32c0,-6.6 5.4,-12 12,-12z" />
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M32,28h44c4.4,0 8,3.6 8,8v32c0,4.4 -3.6,8 -8,8H48l-12,10v-10H32c-4.4,0 -8,-3.6 -8,-8V36c0,-4.4 3.6,-8 8,-8z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,46h12c2.2,0 4,1.8 4,4s-1.8,4 -4,4H48c-2.2,0 -4,-1.8 -4,-4s1.8,-4 4,-4z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,58h24c2.2,0 4,1.8 4,4s-1.8,4 -4,4H42c-2.2,0 -4,-1.8 -4,-4s1.8,-4 4,-4z" />
+    <!-- Stylized JC Badge -->
+    <path
+        android:fillColor="#F4B942"
+        android:pathData="M68,34l3,6 7,1 -5,5 1,7 -6,-3 -6,3 1,-7 -5,-5 7,-1z" />
+</vector>

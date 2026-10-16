@@ -1,0 +1,1373 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Generates the comprehensive, world-class jamesacademy.html in app/src/main/assets/
+Features:
+- Full responsive support for Android phones & Samsung Galaxy tablets (CSS grid/flex)
+- 232 courses with live search, domain filters, chapter reader, exercises, quizzes, exams
+- 40 fully-playable educational games with rules, timers, difficulties, scoring, sound effects
+- Official James Academy completion certificate (printable/downloadable)
+- Web Audio synthesizer for rich offline audio effects
+"""
+
+import os
+
+html_content = r'''<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>JamesAcademy & James Chat — Système Éducatif & 40 Jeux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --primary: #0B3B4F;
+  --primary-dark: #072330;
+  --accent: #FF6B4A;
+  --accent-hover: #E5502F;
+  --gold: #F4B942;
+  --gold-dark: #C28B1E;
+  --bg-main: #F3FAF7;
+  --bg-card: #FFFFFF;
+  --border-light: #DCEEE8;
+  --text-main: #0A1F2B;
+  --text-muted: #4A6775;
+  --success: #2E7D32;
+  --success-bg: #E8F5E9;
+  --error: #C62828;
+  --error-bg: #FFEBEE;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 4px 12px rgba(7,35,48,0.06);
+  --shadow-md: 0 10px 25px -8px rgba(7,35,48,0.18);
+  --shadow-lg: 0 20px 40px -12px rgba(7,35,48,0.25);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--bg-main);
+  color:var(--text-main);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow-x:hidden;
+}
+h1,h2,h3,.display{font-family:'Fraunces',serif;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;}
+a{color:inherit;text-decoration:none;}
+
+/* TOPBAR */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:var(--primary);
+  color:white;
+  padding:12px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:var(--shadow-md);
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-seal{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces',serif;font-weight:900;color:white;font-size:18px;
+  border:2.5px solid var(--gold);
+  transform:rotate(-6deg);
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+}
+.brand-text h1{font-size:18px;font-weight:800;letter-spacing:0.3px;line-height:1.1;}
+.brand-text span{font-size:11px;opacity:0.85;font-weight:500;}
+
+.topbar-nav{
+  display:flex;align-items:center;gap:6px;
+}
+.nav-tab{
+  background:transparent;color:rgba(255,255,255,0.85);
+  font-size:13px;font-weight:600;padding:8px 12px;border-radius:var(--radius-sm);
+  transition:all 0.2s ease;display:flex;align-items:center;gap:6px;
+}
+.nav-tab:hover, .nav-tab.active{
+  background:rgba(255,255,255,0.15);color:white;
+}
+.nav-tab.active{
+  background:var(--accent);color:white;
+}
+
+.xp-badge{
+  background:rgba(244,185,66,0.18);border:1.5px solid var(--gold);
+  color:var(--gold);padding:6px 12px;border-radius:999px;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;
+}
+
+/* MAIN CONTAINER (Responsive for phones and Samsung tablets) */
+main{
+  flex:1;width:100%;max-width:1200px;margin:0 auto;padding:20px 16px 80px;
+}
+@media (min-width: 768px){
+  main{padding:28px 24px 80px;}
+  .topbar{padding:14px 28px;}
+  .brand-text h1{font-size:21px;}
+}
+
+/* SECTION VIEWS */
+.view{display:none;animation:fadeIn 0.25s ease;}
+.view.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* HERO ROW */
+.hero-banner{
+  background:linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color:white;border-radius:var(--radius-lg);padding:24px;
+  box-shadow:var(--shadow-md);margin-bottom:24px;position:relative;overflow:hidden;
+}
+.hero-banner::after{
+  content:"";position:absolute;right:-30px;top:-30px;width:180px;height:180px;
+  border-radius:50%;background:rgba(244,185,66,0.12);pointer-events:none;
+}
+.hero-content{position:relative;z-index:2;}
+.hero-content h2{font-size:24px;margin-bottom:6px;}
+.hero-content p{font-size:14px;opacity:0.9;max-width:650px;line-height:1.5;}
+
+.stats-grid{
+  display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;margin-top:18px;
+}
+@media(min-width:640px){
+  .stats-grid{grid-template-columns:repeat(4, 1fr);}
+}
+.stat-box{
+  background:rgba(255,255,255,0.1);border-radius:var(--radius-md);padding:12px 14px;
+  border:1px solid rgba(255,255,255,0.15);
+}
+.stat-box b{display:block;font-size:20px;font-family:'IBM Plex Mono',monospace;color:var(--gold);}
+.stat-box span{font-size:11.5px;opacity:0.85;text-transform:uppercase;letter-spacing:0.5px;}
+
+/* SECTION HEADERS */
+.section-head{
+  display:flex;align-items:center;justify-content:space-between;margin:26px 0 14px;flex-wrap:wrap;gap:10px;
+}
+.section-head h3{font-size:19px;color:var(--primary);display:flex;align-items:center;gap:8px;}
+.section-head span{font-size:12.5px;color:var(--text-muted);font-weight:600;}
+
+/* SEARCH & FILTER BAR */
+.filter-bar{
+  display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:16px;
+}
+.filter-chip{
+  padding:8px 14px;border-radius:999px;background:white;border:1.5px solid var(--border-light);
+  font-size:13px;font-weight:600;color:var(--text-muted);white-space:nowrap;transition:all 0.15s;
+}
+.filter-chip:hover, .filter-chip.active{
+  background:var(--primary);color:white;border-color:var(--primary);
+}
+
+.search-box{
+  width:100%;margin-bottom:16px;position:relative;
+}
+.search-input{
+  width:100%;padding:13px 18px 13px 44px;border-radius:var(--radius-md);
+  border:1.5px solid var(--border-light);background:white;font-size:14.5px;color:var(--text-main);
+  box-shadow:var(--shadow-sm);transition:border-color 0.2s;
+}
+.search-input:focus{border-color:var(--accent);outline:none;}
+.search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:16px;opacity:0.6;}
+
+/* SUBJECT CARDS (Grid responsive for phones 1-col, tablets 2-3 cols) */
+.cards-grid{
+  display:grid;grid-template-columns:1fr;gap:14px;
+}
+@media(min-width:600px){
+  .cards-grid{grid-template-columns:repeat(2, 1fr);}
+}
+@media(min-width:960px){
+  .cards-grid{grid-template-columns:repeat(3, 1fr);}
+}
+
+.course-card{
+  background:white;border-radius:var(--radius-md);padding:18px;border:1px solid var(--border-light);
+  box-shadow:var(--shadow-sm);display:flex;flex-direction:column;justify-content:space-between;
+  transition:transform 0.15s, box-shadow 0.15s;cursor:pointer;
+}
+.course-card:hover{
+  transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--accent);
+}
+.card-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}
+.card-icon{
+  width:44px;height:44px;border-radius:12px;background:var(--bg-main);
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+  border:1px solid var(--border-light);
+}
+.card-info h4{font-size:15px;font-weight:700;color:var(--primary);line-height:1.2;margin-bottom:4px;}
+.card-info .badge{
+  display:inline-block;background:var(--bg-main);color:var(--primary);
+  font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase;
+}
+.card-desc{font-size:12.5px;color:var(--text-muted);line-height:1.4;margin-bottom:14px;flex:1;}
+.card-btn{
+  width:100%;padding:10px;border-radius:var(--radius-sm);background:var(--primary);
+  color:white;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:background 0.15s;
+}
+.card-btn:hover{background:var(--accent);}
+
+/* COURSE DETAIL READER */
+.course-detail{
+  background:white;border-radius:var(--radius-lg);padding:24px 20px;
+  border:1px solid var(--border-light);box-shadow:var(--shadow-md);
+}
+@media(min-width:768px){.course-detail{padding:36px;}}
+.back-btn{
+  display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;
+  color:var(--primary);margin-bottom:16px;cursor:pointer;padding:6px 12px;border-radius:8px;
+  background:var(--bg-main);
+}
+.back-btn:hover{background:var(--border-light);}
+
+.course-header{margin-bottom:24px;border-bottom:1.5px solid var(--border-light);padding-bottom:18px;}
+.course-header h2{font-size:24px;color:var(--primary);display:flex;align-items:center;gap:10px;}
+.course-header p{font-size:14px;color:var(--text-muted);margin-top:6px;}
+
+.chapter-box{
+  background:var(--bg-main);border-radius:var(--radius-md);padding:20px;margin-bottom:18px;
+  border:1px solid var(--border-light);
+}
+.chapter-box h3{font-size:16.5px;color:var(--primary);margin-bottom:8px;}
+.chapter-box p{font-size:14px;color:var(--text-main);line-height:1.6;margin-bottom:12px;}
+.key-list{margin-left:20px;margin-bottom:10px;}
+.key-list li{font-size:13px;color:var(--text-muted);margin-bottom:4px;line-height:1.4;}
+
+.exercise-box{
+  background:#FFF8E1;border:1.5px solid #FFE082;border-radius:var(--radius-md);
+  padding:20px;margin:24px 0;
+}
+.exercise-box h4{color:#8D6E1C;font-size:15px;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.exercise-box p{font-size:13.5px;line-height:1.5;color:#4A3B05;margin-bottom:12px;}
+.hint-text{display:none;background:white;padding:12px;border-radius:8px;font-size:13px;color:#614C06;margin-top:8px;}
+
+/* QUIZ RUNNER */
+.quiz-runner{
+  background:white;border-radius:var(--radius-md);padding:22px;border:1.5px solid var(--border-light);
+  margin-top:24px;
+}
+.q-title{font-size:17px;font-weight:700;color:var(--primary);margin-bottom:16px;}
+.options-list{display:grid;gap:10px;}
+.opt-btn{
+  text-align:left;padding:13px 16px;border-radius:var(--radius-sm);
+  background:var(--bg-main);border:1.5px solid var(--border-light);font-size:14px;font-weight:600;
+  color:var(--text-main);transition:all 0.15s;display:flex;align-items:center;gap:10px;
+}
+.opt-btn:hover:not(:disabled){background:white;border-color:var(--accent);}
+.opt-btn.correct{background:var(--success-bg);border-color:var(--success);color:var(--success);}
+.opt-btn.wrong{background:var(--error-bg);border-color:var(--error);color:var(--error);}
+.q-feedback{
+  display:none;padding:14px;border-radius:var(--radius-sm);margin-top:14px;font-size:13.5px;line-height:1.5;
+}
+.q-feedback.show{display:block;}
+.q-feedback.ok{background:var(--success-bg);color:var(--success);}
+.q-feedback.ko{background:var(--error-bg);color:var(--error);}
+
+/* GAME ENGINE & CARDS */
+.game-card{
+  background:white;border-radius:var(--radius-md);padding:18px;border:1px solid var(--border-light);
+  box-shadow:var(--shadow-sm);display:flex;flex-direction:column;justify-content:space-between;
+  transition:all 0.2s;
+}
+.game-card:hover{
+  transform:translateY(-3px);border-color:var(--accent);box-shadow:var(--shadow-md);
+}
+.game-badge{
+  align-self:flex-start;background:#FFE4D6;color:var(--accent-hover);
+  font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;margin-bottom:8px;
+}
+.game-title{font-size:16px;font-weight:800;color:var(--primary);margin-bottom:4px;}
+.game-rules-preview{font-size:12.5px;color:var(--text-muted);line-height:1.4;margin-bottom:14px;flex:1;}
+.btn-play{
+  width:100%;padding:11px;border-radius:var(--radius-sm);background:linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color:white;font-weight:800;font-size:13.5px;box-shadow:0 4px 12px rgba(255,107,74,0.3);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-play:hover{background:var(--accent-hover);transform:scale(1.01);}
+
+/* GAME MODAL & RUNNER INTERFACE */
+.game-modal{
+  background:white;border-radius:var(--radius-lg);padding:24px;border:1.5px solid var(--border-light);
+  box-shadow:var(--shadow-lg);max-width:700px;margin:0 auto;
+}
+.game-header-bar{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding-bottom:12px;
+  border-bottom:1px solid var(--border-light);
+}
+.game-timer{
+  font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);
+  background:var(--bg-main);padding:4px 12px;border-radius:999px;border:1px solid var(--border-light);
+}
+.game-score-pill{
+  font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:var(--primary);
+}
+
+.diff-selector{
+  display:flex;gap:8px;margin:16px 0 20px;
+}
+.diff-btn{
+  flex:1;padding:10px;border-radius:var(--radius-sm);background:var(--bg-main);
+  border:1.5px solid var(--border-light);font-size:13px;font-weight:700;color:var(--text-muted);
+}
+.diff-btn.selected{background:var(--primary);color:white;border-color:var(--primary);}
+
+/* CERTIFICATE OF COMPLETION (Officiel James Academy) */
+.cert-card{
+  background:white;border:8px double var(--gold);border-radius:var(--radius-lg);
+  padding:36px 28px;text-align:center;max-width:780px;margin:0 auto;
+  box-shadow:var(--shadow-lg);position:relative;background-image:radial-gradient(#F3FAF7 15%, transparent 16%);
+  background-size:20px 20px;
+}
+.cert-header{font-family:'Fraunces',serif;color:var(--primary);font-size:24px;margin-bottom:4px;letter-spacing:1px;}
+.cert-sub{font-size:13px;color:var(--gold-dark);font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:24px;}
+.cert-body{font-size:15px;line-height:1.6;color:var(--text-main);margin-bottom:28px;}
+.student-name{
+  font-family:'Fraunces',serif;font-size:28px;font-weight:900;color:var(--accent);
+  border-bottom:2px solid var(--gold);padding-bottom:4px;display:inline-block;margin:12px 0;
+}
+.cert-seal{
+  width:90px;height:90px;border-radius:50%;margin:0 auto 16px;
+  background:linear-gradient(135deg, var(--gold), #E5A823);
+  display:flex;align-items:center;justify-content:center;color:white;font-size:40px;
+  border:3px solid white;box-shadow:0 6px 16px rgba(194,139,30,0.4);
+}
+.cert-signatures{
+  display:flex;justify-content:space-between;margin-top:28px;padding-top:18px;border-top:1px dashed var(--border-light);
+  font-size:12px;color:var(--text-muted);
+}
+.cert-signatures b{display:block;color:var(--primary);font-size:13.5px;margin-top:4px;}
+
+/* BUTTONS */
+.btn-primary{
+  padding:12px 20px;border-radius:var(--radius-sm);background:var(--accent);color:white;
+  font-weight:700;font-size:14px;transition:all 0.15s;
+}
+.btn-primary:hover{background:var(--accent-hover);}
+.btn-secondary{
+  padding:12px 20px;border-radius:var(--radius-sm);background:var(--bg-main);color:var(--primary);
+  border:1.5px solid var(--border-light);font-weight:700;font-size:14px;
+}
+.btn-secondary:hover{background:var(--border-light);}
+
+/* FLOATING TOAST XP */
+.xp-toast{
+  position:fixed;bottom:24px;right:24px;background:var(--gold);color:var(--primary-dark);
+  padding:12px 20px;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-weight:800;
+  box-shadow:var(--shadow-lg);z-index:999;display:none;animation:popIn 0.3s ease;
+}
+@keyframes popIn{from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-seal">J</div>
+      <div class="brand-text">
+        <h1>JamesAcademy</h1>
+        <span>Système Éducatif & 40 Jeux</span>
+      </div>
+    </div>
+
+    <nav class="topbar-nav">
+      <button class="nav-tab active" data-tab="home">🏠 Accueil</button>
+      <button class="nav-tab" data-tab="courses">📚 Cours (232)</button>
+      <button class="nav-tab" data-tab="games">🎮 Jeux (40)</button>
+      <button class="nav-tab" data-tab="certificate">🎓 Certificat</button>
+      <button class="nav-tab" data-tab="profile">👤 Profil</button>
+    </nav>
+
+    <div class="xp-badge">
+      ⭐ <span id="topXpVal">0</span> XP · Niv. <span id="topLevelVal">1</span>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+    <!-- VIEW: HOME / DASHBOARD -->
+    <section id="view-home" class="view active">
+      <div class="hero-banner">
+        <div class="hero-content">
+          <h2>Bienvenue sur JamesAcademy & James Chat !</h2>
+          <p>
+            Accédez à un cursus éducatif exhaustif de <b>232 matières structurées</b> et à <b>40 jeux éducatifs interactifs</b>.
+            Apprenez chaque jour, gagnez de l'XP et décrochez votre certificat de réussite officiel !
+          </p>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <b id="statSubjectsCount">232</b>
+              <span>Matières disponibles</span>
+            </div>
+            <div class="stat-box">
+              <b id="statGamesCount">40</b>
+              <span>Jeux jouables</span>
+            </div>
+            <div class="stat-box">
+              <b id="statCompletedCount">0</b>
+              <span>Quiz complétés</span>
+            </div>
+            <div class="stat-box">
+              <b id="statAccuracyVal">100%</b>
+              <span>Précision moyenne</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 DOMAINS QUICK LAUNCH -->
+      <div class="section-head">
+        <h3>🏛️ Les 6 Grands Domaines d'Apprentissage</h3>
+        <span>232 matières conformes</span>
+      </div>
+      <div class="cards-grid" id="domainsOverviewGrid"></div>
+
+      <!-- HIGHLIGHT OF 40 GAMES -->
+      <div class="section-head" style="margin-top:32px;">
+        <h3>🎮 Les 40 Jeux Éducatifs James Academy</h3>
+        <span>Jouables directement en solo ou avec vos amis</span>
+      </div>
+      <div class="cards-grid" id="topGamesGrid"></div>
+    </section>
+
+    <!-- VIEW: 232 COURSES & SUBJECTS -->
+    <section id="view-courses" class="view">
+      <div class="section-head">
+        <h2>📚 Catalogue Pédagogique Complet (232 Matières)</h2>
+        <span id="coursesCountBadge">232 matières chargées</span>
+      </div>
+
+      <!-- SEARCH BOX -->
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="courseSearchInput" class="search-input" placeholder="Rechercher une matière (ex: Haïti, Python, Algèbre, Biologie, Rome, Fractions...)">
+      </div>
+
+      <!-- FILTER CHIPS BY DOMAIN -->
+      <div class="filter-bar" id="courseDomainFilters">
+        <button class="filter-chip active" data-domain="all">Tous (232)</button>
+        <button class="filter-chip" data-domain="histoire_geographie">🏛️ Histoire-Géo (60)</button>
+        <button class="filter-chip" data-domain="sciences_nature">🔬 Sciences & Nature (40)</button>
+        <button class="filter-chip" data-domain="mathematiques">📐 Mathématiques (32)</button>
+        <button class="filter-chip" data-domain="langues">🌍 Langues du Monde (20)</button>
+        <button class="filter-chip" data-domain="informatique_technologie">💻 Informatique & Tech (30)</button>
+        <button class="filter-chip" data-domain="autres_matieres">📚 Autres Matières (50)</button>
+      </div>
+
+      <!-- COURSES LIST GRID -->
+      <div class="cards-grid" id="coursesListGrid"></div>
+    </section>
+
+    <!-- VIEW: COURSE READER & EXERCISES -->
+    <section id="view-course-detail" class="view">
+      <div class="course-detail">
+        <button class="back-btn" id="btnBackToCourses">← Retour aux matières</button>
+        
+        <div class="course-header">
+          <h2 id="detailTitle">Titre de la matière</h2>
+          <p id="detailDesc">Description pédagogique</p>
+        </div>
+
+        <div id="chaptersContainer"></div>
+
+        <!-- PRACTICAL EXERCISE -->
+        <div class="exercise-box">
+          <h4>✍️ <span id="exerciseTitle">Exercice pratique d'application</span></h4>
+          <p id="exerciseScenario">Scénario de l'exercice...</p>
+          <div style="display:flex;gap:10px;margin-top:10px;">
+            <button class="btn-secondary" id="btnShowHint">💡 Afficher un indice</button>
+            <button class="btn-secondary" id="btnShowSolution">✔️ Voir la solution</button>
+          </div>
+          <div class="hint-text" id="exerciseHintBox"></div>
+          <div class="hint-text" id="exerciseSolutionBox" style="background:#E8F5E9;color:#1B5E20;border:1px solid #A5D6A7;"></div>
+        </div>
+
+        <!-- INTERACTIVE QUIZ & EXAM -->
+        <div class="quiz-runner" id="courseQuizRunner">
+          <div class="section-head" style="margin-top:0;">
+            <div class="q-title">📝 Évaluation de synthèse & Examen</div>
+            <span id="quizStepLabel">Question 1/3</span>
+          </div>
+          <div id="quizQuestionBox" style="font-size:16px;font-weight:700;margin-bottom:14px;">Question ici...</div>
+          <div class="options-list" id="quizOptionsList"></div>
+          <div class="q-feedback" id="quizFeedbackBox"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: 40 EDUCATIONAL GAMES -->
+    <section id="view-games" class="view">
+      <div class="section-head">
+        <h2>🎮 Hub des 40 Jeux Éducatifs James Academy</h2>
+        <span>Réellement jouables avec règles, chronomètre et scores</span>
+      </div>
+
+      <!-- SEARCH BOX FOR GAMES -->
+      <div class="search-box">
+        <span class="search-icon">🎯</span>
+        <input type="text" id="gameSearchInput" class="search-input" placeholder="Rechercher un jeu (ex: capitales, drapeaux, calcul, mémoire, énigmes, fractions...)">
+      </div>
+
+      <!-- CATEGORY FILTERS -->
+      <div class="filter-bar" id="gameCategoryFilters">
+        <button class="filter-chip active" data-cat="all">Tous les 40 jeux</button>
+        <button class="filter-chip" data-cat="Culture & Savoir">Culture & Savoir</button>
+        <button class="filter-chip" data-cat="Géographie">Géographie</button>
+        <button class="filter-chip" data-cat="Histoire">Histoire</button>
+        <button class="filter-chip" data-cat="Mathématiques">Mathématiques</button>
+        <button class="filter-chip" data-cat="Sciences">Sciences</button>
+        <button class="filter-chip" data-cat="Langues">Langues</button>
+        <button class="filter-chip" data-cat="Logique & Réflexion">Logique</button>
+      </div>
+
+      <!-- GAMES GRID -->
+      <div class="cards-grid" id="gamesFullGrid"></div>
+    </section>
+
+    <!-- VIEW: GAME RUNNER INTERFACE -->
+    <section id="view-game-play" class="view">
+      <div class="game-modal">
+        <button class="back-btn" id="btnBackToGames">← Retour aux 40 jeux</button>
+        
+        <div class="game-header-bar">
+          <div>
+            <h3 id="playGameTitle" style="font-size:20px;color:var(--primary);">Nom du jeu</h3>
+            <span id="playGameCat" style="font-size:12px;color:var(--text-muted);font-weight:700;">Catégorie</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="game-timer" id="playGameTimer">⏱️ 15s</div>
+            <div class="game-score-pill">Score : <span id="playGameScore">0</span></div>
+          </div>
+        </div>
+
+        <!-- RULES SCREEN -->
+        <div id="gameRulesScreen">
+          <div style="background:var(--bg-main);padding:18px;border-radius:var(--radius-md);margin-bottom:18px;border:1px solid var(--border-light);">
+            <h4 style="color:var(--primary);margin-bottom:6px;">📋 Règles & Objectif du jeu :</h4>
+            <p id="playGameRulesText" style="font-size:14px;line-height:1.5;color:var(--text-main);"></p>
+          </div>
+
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:8px;">Choisissez votre niveau de difficulté :</div>
+          <div class="diff-selector">
+            <button class="diff-btn selected" data-diff="Débutant">Débutant</button>
+            <button class="diff-btn" data-diff="Intermédiaire">Intermédiaire</button>
+            <button class="diff-btn" data-diff="Expert">Expert</button>
+          </div>
+
+          <button class="btn-play" id="btnStartGameNow" style="padding:14px;font-size:15px;">🚀 Démarrer la partie</button>
+        </div>
+
+        <!-- ACTIVE QUESTION SCREEN -->
+        <div id="gameActiveScreen" style="display:none;">
+          <div style="font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:6px;" id="gameProgressLabel">Question 1/4</div>
+          <div id="gameQuestionText" style="font-size:18px;font-weight:800;color:var(--primary);margin-bottom:18px;line-height:1.4;">Texte de la question...</div>
+          <div class="options-list" id="gameOptionsList"></div>
+          <div class="q-feedback" id="gameFeedbackBox"></div>
+        </div>
+
+        <!-- RESULTS SCREEN -->
+        <div id="gameResultScreen" style="display:none;text-align:center;padding:24px 10px;">
+          <div style="font-size:50px;margin-bottom:12px;">🏆</div>
+          <h3 style="font-size:22px;color:var(--primary);margin-bottom:6px;">Partie terminée !</h3>
+          <p style="font-size:14px;color:var(--text-muted);margin-bottom:20px;">Félicitations pour votre concentration et vos efforts.</p>
+          
+          <div style="background:var(--bg-main);padding:16px;border-radius:var(--radius-md);margin-bottom:24px;border:1px solid var(--border-light);display:inline-block;min-width:240px;">
+            <div style="font-size:12px;text-transform:uppercase;color:var(--text-muted);font-weight:700;">Score final</div>
+            <div id="finalScoreVal" style="font-size:32px;font-weight:900;font-family:'IBM Plex Mono',monospace;color:var(--accent);">0 pts</div>
+            <div id="finalXpEarned" style="font-size:13px;font-weight:700;color:var(--gold-dark);margin-top:4px;">+100 XP gagnés ⭐</div>
+          </div>
+
+          <div style="display:flex;gap:12px;justify-content:center;">
+            <button class="btn-primary" id="btnReplayGame">🔄 Rejouer</button>
+            <button class="btn-secondary" id="btnOtherGames">🎮 Choisir un autre jeu</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: OFFICIAL CERTIFICATE -->
+    <section id="view-certificate" class="view">
+      <div class="cert-card" id="officialCertificate">
+        <div class="cert-seal">🎓</div>
+        <div class="cert-header">RÉPUBLIQUE D'HAÏTI & JAMES ACADEMY</div>
+        <div class="cert-sub">Attestation Officielle d'Excellence & de Réussite Académique</div>
+        
+        <div class="cert-body">
+          Le présent certificat est solennellement décerné à :<br>
+          <span class="student-name" id="certStudentName">James Gamer</span><br>
+          Pour avoir démontré une maîtrise remarquable, de l'assiduité et d'excellents résultats dans le programme
+          éducatif pluridisciplinaire de <b>JamesAcademy</b> (Histoire, Géographie, Sciences, Mathématiques, Langues & Technologie).
+        </div>
+
+        <div style="display:inline-flex;gap:20px;font-size:13px;color:var(--text-muted);margin-bottom:20px;">
+          <span>Mention : <b style="color:var(--success);">Très Bien ⭐⭐⭐</b></span>
+          <span>Date : <b id="certCurrentDate">14 Octobre 2026</b></span>
+        </div>
+
+        <div class="cert-signatures">
+          <div>
+            <span>Directeur Pédagogique</span>
+            <b>Direction James Academy</b>
+          </div>
+          <div>
+            <span>Sceau de Vérification</span>
+            <b style="font-family:'IBM Plex Mono',monospace;color:var(--gold-dark);">#JA-2026-CERT-OK</b>
+          </div>
+          <div>
+            <span>Recteur Académique</span>
+            <b>James Designer & Engineer</b>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:24px;">
+        <button class="btn-primary" onclick="window.print()">🖨️ Imprimer ou Télécharger le Certificat</button>
+      </div>
+    </section>
+
+    <!-- VIEW: PROFILE & BADGES -->
+    <section id="view-profile" class="view">
+      <div class="hero-banner" style="margin-bottom:20px;">
+        <div class="hero-content">
+          <h2 id="profUserTitle">Profil de l'élève</h2>
+          <p>Suivez vos progrès, vos scores et vos récompenses d'apprentissage.</p>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h3>🎖️ Badges et Trophées d'Honneur</h3>
+        <span>Débloqués au fil de vos réussites</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px;" id="badgesListWrap">
+        <div class="xp-badge" style="background:white;border-color:var(--gold);color:var(--primary);font-size:13px;padding:8px 14px;">🎖️ Premier Pas</div>
+        <div class="xp-badge" style="background:white;border-color:var(--gold);color:var(--primary);font-size:13px;padding:8px 14px;">🇭🇹 Héros d'Haïti 1804</div>
+        <div class="xp-badge" style="background:white;border-color:var(--gold);color:var(--primary);font-size:13px;padding:8px 14px;">📐 Maître des Nombres</div>
+        <div class="xp-badge" style="background:white;border-color:var(--gold);color:var(--primary);font-size:13px;padding:8px 14px;">🔬 Esprit Scientifique</div>
+        <div class="xp-badge" style="background:white;border-color:var(--gold);color:var(--primary);font-size:13px;padding:8px 14px;">🌍 Polyglotte International</div>
+        <div class="xp-badge" style="background:white;border-color:var(--gold);color:var(--primary);font-size:13px;padding:8px 14px;">💻 Codeur d'Élite</div>
+      </div>
+
+      <div class="section-head">
+        <h3>📊 Historique des Sessions</h3>
+        <span id="sessionsCountLabel">0 sessions</span>
+      </div>
+      <div id="sessionHistoryWrap" style="background:white;border-radius:var(--radius-md);border:1px solid var(--border-light);padding:16px;">
+        <p style="color:var(--text-muted);font-size:13.5px;text-align:center;">Aucune session complétée pour l'instant. Lancez un cours ou un jeu !</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- XP TOAST NOTIFICATION -->
+  <div class="xp-toast" id="xpToast">+50 XP ⭐</div>
+</div>
+
+<!-- EXTERNAL DATA SCRIPTS -->
+<script src="curriculum_data.js"></script>
+<script src="games_data.js"></script>
+
+<!-- ACADEMY CORE ENGINE -->
+<script>
+// ==========================================
+// SOUND ENGINE (Web Audio API)
+// ==========================================
+const SoundEngine = {
+  ctx: null,
+  init() {
+    if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  },
+  play(freq, type = 'sine', duration = 0.1, gain = 0.1) {
+    try {
+      this.init();
+      if (!this.ctx) return;
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+      g.gain.setValueAtTime(gain, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      osc.connect(g);
+      g.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch(e){}
+  },
+  success() {
+    this.play(523, 'triangle', 0.1, 0.15);
+    setTimeout(() => this.play(659, 'triangle', 0.12, 0.15), 90);
+    setTimeout(() => this.play(784, 'triangle', 0.25, 0.2), 180);
+  },
+  error() {
+    this.play(190, 'sawtooth', 0.15, 0.15);
+    setTimeout(() => this.play(140, 'sawtooth', 0.2, 0.15), 110);
+  },
+  click() {
+    this.play(600, 'sine', 0.04, 0.05);
+  }
+};
+
+// ==========================================
+// APP STATE & PERSISTENCE
+// ==========================================
+const AppState = {
+  user: {
+    name: 'James Gamer',
+    xp: 0,
+    level: 1,
+    quizzesCompleted: 0,
+    correctCount: 0,
+    totalCount: 0
+  },
+  history: [],
+  currentTab: 'home',
+  selectedCourse: null,
+  activeQuizStep: 0,
+  activeQuizCorrect: 0,
+  activeGame: null,
+  activeGameStep: 0,
+  activeGameScore: 0,
+  activeGameDiff: 'Débutant',
+  gameTimerId: null,
+  gameTimeRemaining: 15,
+
+  load() {
+    // Read user from query param if available
+    const params = new URLSearchParams(window.location.search);
+    const paramUser = params.get('user');
+    if (paramUser) {
+      this.user.name = decodeURIComponent(paramUser);
+    }
+    try {
+      const saved = localStorage.getItem('james_academy_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.user) Object.assign(this.user, parsed.user);
+        if (parsed.history) this.history = parsed.history;
+      }
+    } catch(e){}
+    this.updateStatsUI();
+  },
+
+  save() {
+    try {
+      localStorage.setItem('james_academy_state', JSON.stringify({
+        user: this.user,
+        history: this.history
+      }));
+    } catch(e){}
+    this.updateStatsUI();
+  },
+
+  addXp(amount) {
+    this.user.xp += amount;
+    this.user.level = Math.floor(this.user.xp / 100) + 1;
+    this.save();
+    
+    // Toast
+    const toast = document.getElementById('xpToast');
+    if (toast) {
+      toast.innerText = `+${amount} XP ⭐`;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 1500);
+    }
+  },
+
+  updateStatsUI() {
+    const topXp = document.getElementById('topXpVal');
+    const topLvl = document.getElementById('topLevelVal');
+    const statComp = document.getElementById('statCompletedCount');
+    const statAcc = document.getElementById('statAccuracyVal');
+    const certName = document.getElementById('certStudentName');
+    const profTitle = document.getElementById('profUserTitle');
+
+    if (topXp) topXp.innerText = this.user.xp;
+    if (topLvl) topLvl.innerText = this.user.level;
+    if (statComp) statComp.innerText = this.user.quizzesCompleted;
+    if (statAcc) {
+      const rate = this.user.totalCount > 0 ? Math.round((this.user.correctCount / this.user.totalCount) * 100) : 100;
+      statAcc.innerText = `${rate}%`;
+    }
+    if (certName) certName.innerText = this.user.name || 'James Gamer';
+    if (profTitle) profTitle.innerText = `Profil de ${this.user.name || 'James Gamer'}`;
+  }
+};
+
+// ==========================================
+// NAVIGATION CONTROLLER
+// ==========================================
+function switchTab(tabId) {
+  AppState.currentTab = tabId;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  
+  const targetView = document.getElementById(`view-${tabId}`);
+  if (targetView) targetView.classList.add('active');
+
+  const targetTab = document.querySelector(`.nav-tab[data-tab="${tabId}"]`);
+  if (targetTab) targetTab.classList.add('active');
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ==========================================
+// RENDER CURRICULUM
+// ==========================================
+function renderDomainsOverview() {
+  const container = document.getElementById('domainsOverviewGrid');
+  if (!container || !window.JAMES_CURRICULUM) return;
+
+  container.innerHTML = '';
+  window.JAMES_CURRICULUM.domains.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'course-card';
+    div.innerHTML = `
+      <div>
+        <div class="card-top">
+          <div class="card-icon">${d.icon}</div>
+          <div class="card-info">
+            <h4>${d.title}</h4>
+            <span class="badge">${d.subjects.length} matières</span>
+          </div>
+        </div>
+        <p class="card-desc">${d.description}</p>
+      </div>
+      <button class="card-btn" onclick="openDomainCourses('${d.id}')">Explorer le domaine →</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function openDomainCourses(domainId) {
+  switchTab('courses');
+  const chip = document.querySelector(`.filter-chip[data-domain="${domainId}"]`);
+  if (chip) chip.click();
+}
+
+function renderCoursesList(filterDomain = 'all', searchQuery = '') {
+  const container = document.getElementById('coursesListGrid');
+  const countBadge = document.getElementById('coursesCountBadge');
+  if (!container || !window.JAMES_CURRICULUM) return;
+
+  const q = searchQuery.toLowerCase().trim();
+  const filtered = window.JAMES_CURRICULUM.subjects.filter(s => {
+    const matchesDomain = (filterDomain === 'all' || s.domainId === filterDomain);
+    const matchesSearch = !q || s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q);
+    return matchesDomain && matchesSearch;
+  });
+
+  if (countBadge) countBadge.innerText = `${filtered.length} matières affichées`;
+
+  container.innerHTML = '';
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">Aucune matière trouvée correspondant à votre recherche.</div>`;
+    return;
+  }
+
+  filtered.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'course-card';
+    card.onclick = () => openCourseDetail(s.id);
+    card.innerHTML = `
+      <div>
+        <div class="card-top">
+          <div class="card-icon">${s.icon}</div>
+          <div class="card-info">
+            <h4>${s.title}</h4>
+            <span class="badge">${s.category}</span>
+          </div>
+        </div>
+        <p class="card-desc">${s.description}</p>
+      </div>
+      <button class="card-btn">Commencer le cours 📖</button>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function openCourseDetail(subjectId) {
+  if (!window.JAMES_CURRICULUM) return;
+  const subject = window.JAMES_CURRICULUM.subjects.find(s => s.id === subjectId);
+  if (!subject) return;
+
+  AppState.selectedCourse = subject;
+  AppState.activeQuizStep = 0;
+  AppState.activeQuizCorrect = 0;
+
+  document.getElementById('detailTitle').innerText = `${subject.icon} ${subject.title}`;
+  document.getElementById('detailDesc').innerText = `${subject.domainTitle} • ${subject.level} • ${subject.description}`;
+
+  // Render 3 Chapters
+  const chContainer = document.getElementById('chaptersContainer');
+  chContainer.innerHTML = '';
+  subject.chapters.forEach(ch => {
+    const box = document.createElement('div');
+    box.className = 'chapter-box';
+    let keyHtml = '';
+    if (ch.keyTakeaways) {
+      keyHtml = '<ul class="key-list">' + ch.keyTakeaways.map(k => `<li>✓ ${k}</li>`).join('') + '</ul>';
+    }
+    box.innerHTML = `
+      <h3>${ch.title}</h3>
+      <p style="font-weight:600;color:var(--primary);margin-bottom:6px;">${ch.summary}</p>
+      <p>${ch.content}</p>
+      ${keyHtml}
+    `;
+    chContainer.appendChild(box);
+  });
+
+  // Render Exercise
+  const ex = subject.interactiveExercise;
+  document.getElementById('exerciseTitle').innerText = ex.title;
+  document.getElementById('exerciseScenario').innerText = `${ex.instruction} ${ex.scenario}`;
+  
+  const hintBox = document.getElementById('exerciseHintBox');
+  const solBox = document.getElementById('exerciseSolutionBox');
+  hintBox.style.display = 'none';
+  hintBox.innerText = `💡 Indice : ${ex.hint}`;
+  solBox.style.display = 'none';
+  solBox.innerText = `✔️ Solution : ${ex.solution}`;
+
+  document.getElementById('btnShowHint').onclick = () => {
+    hintBox.style.display = hintBox.style.display === 'block' ? 'none' : 'block';
+  };
+  document.getElementById('btnShowSolution').onclick = () => {
+    solBox.style.display = solBox.style.display === 'block' ? 'none' : 'block';
+  };
+
+  // Render First Question of Quiz
+  renderCourseQuizStep();
+
+  // Switch to Course Detail view
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-course-detail').classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderCourseQuizStep() {
+  const subject = AppState.selectedCourse;
+  if (!subject) return;
+
+  const questions = subject.quiz.concat(subject.finalExam || []);
+  const step = AppState.activeQuizStep;
+  const label = document.getElementById('quizStepLabel');
+  const qBox = document.getElementById('quizQuestionBox');
+  const optList = document.getElementById('quizOptionsList');
+  const feedback = document.getElementById('quizFeedbackBox');
+
+  feedback.className = 'q-feedback';
+  feedback.style.display = 'none';
+
+  if (step >= questions.length) {
+    // Quiz finished
+    label.innerText = 'Évaluation terminée !';
+    qBox.innerText = `Bravo ! Vous avez obtenu ${AppState.activeQuizCorrect} sur ${questions.length} bonnes réponses.`;
+    optList.innerHTML = `
+      <div style="background:var(--success-bg);padding:18px;border-radius:12px;border:1.5px solid var(--success);color:var(--success);text-align:center;">
+        <b>🎉 Matière validée avec succès !</b><br>
+        Vous avez gagné +100 XP d'apprentissage.
+      </div>
+      <button class="btn-primary" style="margin-top:14px;" onclick="switchTab('courses')">← Retourner aux matières</button>
+    `;
+    AppState.addXp(100);
+    AppState.user.quizzesCompleted += 1;
+    AppState.history.unshift({
+      date: new Date().toLocaleDateString('fr-FR'),
+      title: subject.title,
+      score: `${AppState.activeQuizCorrect}/${questions.length}`,
+      xp: '+100 XP'
+    });
+    AppState.save();
+    SoundEngine.success();
+    return;
+  }
+
+  const currentQ = questions[step];
+  label.innerText = `Question ${step + 1}/${questions.length}`;
+  qBox.innerText = currentQ.question;
+
+  optList.innerHTML = '';
+  currentQ.options.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span style="width:24px;height:24px;border-radius:50%;background:white;display:inline-flex;align-items:center;justify-content:center;font-size:12px;border:1px solid #ccc;font-weight:700;">${String.fromCharCode(65 + idx)}</span> ${opt}`;
+    btn.onclick = () => handleCourseQuizAnswer(idx, currentQ, btn);
+    optList.appendChild(btn);
+  });
+}
+
+function handleCourseQuizAnswer(chosenIdx, questionObj, clickedBtn) {
+  const allBtns = document.querySelectorAll('#quizOptionsList .opt-btn');
+  allBtns.forEach(b => b.disabled = true);
+
+  const feedback = document.getElementById('quizFeedbackBox');
+  AppState.user.totalCount += 1;
+
+  if (chosenIdx === questionObj.correct) {
+    clickedBtn.classList.add('correct');
+    feedback.className = 'q-feedback show ok';
+    feedback.innerHTML = `<b>✔️ Bonne réponse !</b> ${questionObj.explanation}`;
+    AppState.activeQuizCorrect += 1;
+    AppState.user.correctCount += 1;
+    SoundEngine.success();
+  } else {
+    clickedBtn.classList.add('wrong');
+    if (allBtns[questionObj.correct]) allBtns[questionObj.correct].classList.add('correct');
+    feedback.className = 'q-feedback show ko';
+    feedback.innerHTML = `<b>✘ Réponse incorrecte.</b> ${questionObj.explanation}`;
+    SoundEngine.error();
+  }
+
+  AppState.save();
+
+  setTimeout(() => {
+    AppState.activeQuizStep += 1;
+    renderCourseQuizStep();
+  }, 2200);
+}
+
+// ==========================================
+// RENDER 40 EDUCATIONAL GAMES
+// ==========================================
+function renderGamesCatalog(categoryFilter = 'all', searchQuery = '') {
+  const container = document.getElementById('gamesFullGrid');
+  const topContainer = document.getElementById('topGamesGrid');
+  if (!container || !window.JAMES_GAMES) return;
+
+  const q = searchQuery.toLowerCase().trim();
+  const allGames = window.JAMES_GAMES.games;
+
+  // Render top games on dashboard
+  if (topContainer) {
+    topContainer.innerHTML = '';
+    allGames.slice(0, 6).forEach(g => {
+      const c = createGameCard(g);
+      topContainer.appendChild(c);
+    });
+  }
+
+  // Render games full catalog
+  const filtered = allGames.filter(g => {
+    const matchesCat = (categoryFilter === 'all' || g.category === categoryFilter);
+    const matchesSearch = !q || g.name.toLowerCase().includes(q) || g.rules.toLowerCase().includes(q);
+    return matchesCat && matchesSearch;
+  });
+
+  container.innerHTML = '';
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">Aucun jeu trouvé.</div>`;
+    return;
+  }
+
+  filtered.forEach(g => {
+    container.appendChild(createGameCard(g));
+  });
+}
+
+function createGameCard(g) {
+  const card = document.createElement('div');
+  card.className = 'game-card';
+  card.innerHTML = `
+    <div>
+      <span class="game-badge">${g.category}</span>
+      <div style="font-size:28px;margin-bottom:8px;">${g.icon}</div>
+      <h4 class="game-title">${g.name}</h4>
+      <p class="game-rules-preview">${g.rules}</p>
+    </div>
+    <button class="btn-play" onclick="openGamePlay('${g.id}')">🎮 Jouer maintenant</button>
+  `;
+  return card;
+}
+
+function openGamePlay(gameId) {
+  if (!window.JAMES_GAMES) return;
+  const game = window.JAMES_GAMES.games.find(g => g.id === gameId);
+  if (!game) return;
+
+  AppState.activeGame = game;
+  AppState.activeGameStep = 0;
+  AppState.activeGameScore = 0;
+
+  document.getElementById('playGameTitle').innerText = `${game.icon} ${game.name}`;
+  document.getElementById('playGameCat').innerText = `${game.category} • +${game.points} pts`;
+  document.getElementById('playGameRulesText').innerText = game.rules;
+  document.getElementById('playGameScore').innerText = '0';
+
+  // Show rules screen first
+  document.getElementById('gameRulesScreen').style.display = 'block';
+  document.getElementById('gameActiveScreen').style.display = 'none';
+  document.getElementById('gameResultScreen').style.display = 'none';
+
+  // Timer visibility
+  const timerBadge = document.getElementById('playGameTimer');
+  if (game.hasTimer) {
+    timerBadge.style.display = 'block';
+    timerBadge.innerText = `⏱️ ${game.timeLimit}s`;
+  } else {
+    timerBadge.style.display = 'none';
+  }
+
+  // Switch to Play View
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-game-play').classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function startGameActive() {
+  const game = AppState.activeGame;
+  if (!game) return;
+
+  document.getElementById('gameRulesScreen').style.display = 'none';
+  document.getElementById('gameActiveScreen').style.display = 'block';
+  document.getElementById('gameResultScreen').style.display = 'none';
+
+  renderGameActiveStep();
+}
+
+function renderGameActiveStep() {
+  const game = AppState.activeGame;
+  if (!game) return;
+
+  const questions = game.questions || [];
+  const step = AppState.activeGameStep;
+
+  if (step >= questions.length) {
+    finishGame();
+    return;
+  }
+
+  const q = questions[step];
+  document.getElementById('gameProgressLabel').innerText = `Question ${step + 1} / ${questions.length}`;
+  document.getElementById('gameQuestionText').innerText = q.question;
+
+  const feedback = document.getElementById('gameFeedbackBox');
+  feedback.className = 'q-feedback';
+  feedback.style.display = 'none';
+
+  // Reset timer
+  clearInterval(AppState.gameTimerId);
+  if (game.hasTimer) {
+    AppState.gameTimeRemaining = game.timeLimit;
+    const timerElem = document.getElementById('playGameTimer');
+    timerElem.innerText = `⏱️ ${AppState.gameTimeRemaining}s`;
+
+    AppState.gameTimerId = setInterval(() => {
+      AppState.gameTimeRemaining -= 1;
+      timerElem.innerText = `⏱️ ${AppState.gameTimeRemaining}s`;
+      if (AppState.gameTimeRemaining <= 0) {
+        clearInterval(AppState.gameTimerId);
+        handleGameTimeout(q);
+      }
+    }, 1000);
+  }
+
+  // Render options
+  const optList = document.getElementById('gameOptionsList');
+  optList.innerHTML = '';
+  q.options.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span style="width:24px;height:24px;border-radius:50%;background:white;display:inline-flex;align-items:center;justify-content:center;font-size:12px;border:1px solid #ccc;font-weight:700;">${String.fromCharCode(65 + idx)}</span> ${opt}`;
+    btn.onclick = () => handleGameAnswer(idx, q, btn);
+    optList.appendChild(btn);
+  });
+}
+
+function handleGameTimeout(questionObj) {
+  const allBtns = document.querySelectorAll('#gameOptionsList .opt-btn');
+  allBtns.forEach(b => b.disabled = true);
+  if (allBtns[questionObj.correct]) allBtns[questionObj.correct].classList.add('correct');
+
+  const feedback = document.getElementById('gameFeedbackBox');
+  feedback.className = 'q-feedback show ko';
+  feedback.innerHTML = `<b>⏰ Temps écoulé !</b> ${questionObj.explanation}`;
+  SoundEngine.error();
+
+  setTimeout(() => {
+    AppState.activeGameStep += 1;
+    renderGameActiveStep();
+  }, 2200);
+}
+
+function handleGameAnswer(chosenIdx, questionObj, clickedBtn) {
+  clearInterval(AppState.gameTimerId);
+
+  const allBtns = document.querySelectorAll('#gameOptionsList .opt-btn');
+  allBtns.forEach(b => b.disabled = true);
+
+  const feedback = document.getElementById('gameFeedbackBox');
+  const game = AppState.activeGame;
+  AppState.user.totalCount += 1;
+
+  if (chosenIdx === questionObj.correct) {
+    clickedBtn.classList.add('correct');
+    feedback.className = 'q-feedback show ok';
+    feedback.innerHTML = `<b>✔️ Bravo !</b> ${questionObj.explanation}`;
+    AppState.activeGameScore += (game.points || 100);
+    AppState.user.correctCount += 1;
+    document.getElementById('playGameScore').innerText = AppState.activeGameScore;
+    SoundEngine.success();
+  } else {
+    clickedBtn.classList.add('wrong');
+    if (allBtns[questionObj.correct]) allBtns[questionObj.correct].classList.add('correct');
+    feedback.className = 'q-feedback show ko';
+    feedback.innerHTML = `<b>✘ Oups !</b> ${questionObj.explanation}`;
+    SoundEngine.error();
+  }
+
+  AppState.save();
+
+  setTimeout(() => {
+    AppState.activeGameStep += 1;
+    renderGameActiveStep();
+  }, 2200);
+}
+
+function finishGame() {
+  clearInterval(AppState.gameTimerId);
+  const game = AppState.activeGame;
+
+  document.getElementById('gameActiveScreen').style.display = 'none';
+  document.getElementById('gameResultScreen').style.display = 'block';
+
+  document.getElementById('finalScoreVal').innerText = `${AppState.activeGameScore} pts`;
+  document.getElementById('finalXpEarned').innerText = `+${Math.max(50, Math.floor(AppState.activeGameScore / 2))} XP gagnés ⭐`;
+
+  AppState.addXp(Math.max(50, Math.floor(AppState.activeGameScore / 2)));
+  AppState.history.unshift({
+    date: new Date().toLocaleDateString('fr-FR'),
+    title: game.name,
+    score: `${AppState.activeGameScore} pts`,
+    xp: `+${Math.max(50, Math.floor(AppState.activeGameScore / 2))} XP`
+  });
+  AppState.save();
+  SoundEngine.success();
+}
+
+// ==========================================
+// INITIALIZATION
+// ==========================================
+window.addEventListener('DOMContentLoaded', () => {
+  AppState.load();
+
+  // Set today's date on certificate
+  const d = new Date();
+  const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const certDate = document.getElementById('certCurrentDate');
+  if (certDate) certDate.innerText = dateStr;
+
+  // Nav Tabs click
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      SoundEngine.click();
+      switchTab(tab.getAttribute('data-tab'));
+    });
+  });
+
+  // Back buttons
+  document.getElementById('btnBackToCourses').addEventListener('click', () => {
+    switchTab('courses');
+  });
+  document.getElementById('btnBackToGames').addEventListener('click', () => {
+    switchTab('games');
+  });
+
+  // Course search input
+  const courseSearch = document.getElementById('courseSearchInput');
+  courseSearch.addEventListener('input', (e) => {
+    const activeChip = document.querySelector('#courseDomainFilters .filter-chip.active');
+    const domain = activeChip ? activeChip.getAttribute('data-domain') : 'all';
+    renderCoursesList(domain, e.target.value);
+  });
+
+  // Course domain filters
+  document.querySelectorAll('#courseDomainFilters .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      SoundEngine.click();
+      document.querySelectorAll('#courseDomainFilters .filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderCoursesList(chip.getAttribute('data-domain'), courseSearch.value);
+    });
+  });
+
+  // Games search input
+  const gameSearch = document.getElementById('gameSearchInput');
+  gameSearch.addEventListener('input', (e) => {
+    const activeChip = document.querySelector('#gameCategoryFilters .filter-chip.active');
+    const cat = activeChip ? activeChip.getAttribute('data-cat') : 'all';
+    renderGamesCatalog(cat, e.target.value);
+  });
+
+  // Game category filters
+  document.querySelectorAll('#gameCategoryFilters .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      SoundEngine.click();
+      document.querySelectorAll('#gameCategoryFilters .filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderGamesCatalog(chip.getAttribute('data-cat'), gameSearch.value);
+    });
+  });
+
+  // Difficulty buttons
+  document.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      SoundEngine.click();
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      AppState.activeGameDiff = btn.getAttribute('data-diff');
+    });
+  });
+
+  // Start Game Button
+  document.getElementById('btnStartGameNow').addEventListener('click', () => {
+    SoundEngine.click();
+    startGameActive();
+  });
+
+  // Replay Game Button
+  document.getElementById('btnReplayGame').addEventListener('click', () => {
+    if (AppState.activeGame) openGamePlay(AppState.activeGame.id);
+  });
+
+  // Other Games Button
+  document.getElementById('btnOtherGames').addEventListener('click', () => {
+    switchTab('games');
+  });
+
+  // Render initial contents
+  renderDomainsOverview();
+  renderCoursesList();
+  renderGamesCatalog();
+
+  // Check URL query for direct linking (?game=... or ?subject=...)
+  const params = new URLSearchParams(window.location.search);
+  const directGame = params.get('game');
+  const directSubject = params.get('subject');
+  if (directGame) {
+    setTimeout(() => openGamePlay(directGame), 200);
+  } else if (directSubject) {
+    setTimeout(() => openCourseDetail(directSubject), 200);
+  }
+});
+</script>
+</body>
+</html>
+'''
+
+assets_dir = os.path.abspath("app/src/main/assets")
+target_file = os.path.join(assets_dir, "jamesacademy.html")
+with open(target_file, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print(f"Successfully wrote {target_file} ({len(html_content)} bytes)")

@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Fond circulaire ou bulle moderne avec dégradé virtuel bleu & violet -->
+    <!-- Gradient simulation: Background rounded chat bubble / shield -->
+    <path
+        android:fillColor="#1E1B4B"
+        android:pathData="M22,18h64c7.7,0 14,6.3 14,14v44c0,7.7 -6.3,14 -14,14H46l-18,14v-14H22c-7.7,0 -14,-6.3 -14,-14V32c0,-7.7 6.3,-14 14,-14z" />
+
+    <!-- Couche interne violette futuriste -->
+    <path
+        android:fillColor="#6366F1"
+        android:pathData="M26,22h56c5.5,0 10,4.5 10,10v38c0,5.5 -4.5,10 -10,10H46l-14,10v-10H26c-5.5,0 -10,-4.5 -10,-10V32c0,-5.5 4.5,-10 10,-10z" />
+
+    <!-- Forme stylisée de la lettre J futuriste de James Bot -->
+    <!-- Barre supérieure horizontale du J -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M44,32h28c2.2,0 4,1.8 4,4s-1.8,4 -4,4H44c-2.2,0 -4,-1.8 -4,-4s1.8,-4 4,-4z" />
+
+    <!-- Corps vertical et courbe élégante du J -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,36v24c0,7.7 -6.3,14 -14,14s-14,-6.3 -14,-14c0,-2.2 1.8,-4 4,-4s4,1.8 4,4c0,3.3 2.7,6 6,6s6,-2.7 6,-6V36c0,-2.2 1.8,-4 4,-4s4,1.8 4,4z" />
+
+    <!-- Étoile d'intelligence artificielle / Assistant étincelle en haut à droite -->
+    <path
+        android:fillColor="#A855F7"
+        android:pathData="M78,28l1.8,4.2 4.2,1.8 -4.2,1.8 -1.8,4.2 -1.8,-4.2 -4.2,-1.8 4.2,-1.8z" />
+
+    <!-- Deuxième étincelle lumineuse en bas à gauche -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M28,68l1.3,3 3,1.3 -3,1.3 -1.3,3 -1.3,-3 -3,-1.3 3,-1.3z" />
+
+    <!-- Œil ou diode intelligente au sommet du J -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M60,46m-3,0a3,3 0,1,1 6,0a3,3 0,1,1 -6,0" />
+</vector>

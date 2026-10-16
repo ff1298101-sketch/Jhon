@@ -1,0 +1,6 @@
+{
+  "name": "James Chat",
+  "description": "Application de messagerie moderne complète avec chats multimédias, messages éphémères, groupes, statuts, appels, administration et portail JamesAcademy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
