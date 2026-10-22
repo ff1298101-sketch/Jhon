@@ -111,6 +111,12 @@ interface JamesChatDao {
     @Query("SELECT * FROM contacts WHERE ownerId = :ownerId AND contactUserId = :contactUserId LIMIT 1")
     suspend fun getContact(ownerId: String, contactUserId: String): ContactEntity?
 
+    @Query("SELECT COUNT(*) FROM contacts WHERE ownerId = :ownerId AND contactUserId = :contactUserId")
+    suspend fun countContact(ownerId: String, contactUserId: String): Int
+
+    @Query("SELECT u.* FROM users u INNER JOIN contacts c ON u.id = c.contactUserId WHERE c.ownerId = :ownerId AND c.isBlocked = 0 ORDER BY CASE WHEN u.firstName != '' THEN u.firstName ELSE u.username END ASC")
+    fun getContactUsersFlow(ownerId: String): Flow<List<UserEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContact(contact: ContactEntity)
 
@@ -196,6 +202,18 @@ interface JamesChatDao {
 
     @Query("UPDATE messages SET status = :status WHERE id = :messageId")
     suspend fun updateMessageStatus(messageId: String, status: String)
+
+    @Query("UPDATE messages SET status = 'READ' WHERE conversationId = :conversationId AND senderId != :currentUserId AND status != 'READ'")
+    suspend fun markIncomingMessagesAsRead(conversationId: String, currentUserId: String)
+
+    @Query("UPDATE messages SET status = 'READ' WHERE conversationId = :conversationId AND senderId = :currentUserId AND status != 'READ'")
+    suspend fun markSentMessagesAsRead(conversationId: String, currentUserId: String)
+
+    @Query("UPDATE messages SET status = 'DELIVERED' WHERE conversationId = :conversationId AND senderId = :currentUserId AND status = 'SENT'")
+    suspend fun markSentMessagesAsDelivered(conversationId: String, currentUserId: String)
+
+    @Query("UPDATE conversations SET pinnedMessageId = :messageId, pinnedMessageText = :text WHERE id = :conversationId")
+    suspend fun setConversationPinnedMessage(conversationId: String, messageId: String?, text: String?)
 
     @Query("SELECT * FROM messages WHERE isPendingSync = 1")
     suspend fun getPendingSyncMessages(): List<MessageEntity>

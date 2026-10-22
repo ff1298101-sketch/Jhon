@@ -1,6 +1,16 @@
 package com.example.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,9 +32,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -501,6 +516,14 @@ fun SecuritySettingsScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // SECTION 5: FOIRE AUX QUESTIONS (FAQ) & SUPPORT
+            SectionLabel(if (currentLang == AppLanguage.KREYOL) "KESYON YO POZE SOUVAN (FAQ) & SIPÒ" else "FOIRE AUX QUESTIONS (FAQ) & ASSISTANCE")
+            SecurityFaqAccordion(currentLang = currentLang, context = context)
+
+            Spacer(modifier = Modifier.height(28.dp))
         }
     }
 
@@ -645,5 +668,225 @@ private fun SecuritySettingRow(
             }
         }
         trailing()
+    }
+}
+
+@Composable
+fun SecurityFaqAccordion(
+    currentLang: AppLanguage,
+    context: Context
+) {
+    val isKreyol = currentLang == AppLanguage.KREYOL
+
+    data class FaqItem(
+        val question: String,
+        val answer: String
+    )
+
+    val faqItems = remember(isKreyol) {
+        if (isKreyol) {
+            listOf(
+                FaqItem(
+                    question = "🔒 Poukisa James Chat mande pèmisyon (Micro, Kamera, Depo, Notifikasyon) ?",
+                    answer = "James Chat mande sèlman pèmisyon ki esansyèl pou fonksyon w ap itilize yo :\n• Mikwofòn : Pou voye nòt vokal ak fè apèl odyo klè HD.\n• Kamera : Pou pran foto, videyo ak fè apèl videyo an dirèk.\n• Depo / Fichye : Pou voye ak resevwa fim, videyo lou ak dokiman san limit.\n• Notifikasyon : Pou w jwenn alèt touswit lè yon moun voye mesaj oswa fè w yon apèl.\nNou pa janm pran pyès enfòmasyon pèsonèl san konsantman w."
+                ),
+                FaqItem(
+                    question = "🛡️ Kijan chifreman bout an bout (E2EE) la fonksyone ?",
+                    answer = "Tout mesaj, apèl ak fichye ou voye yo pwoteje avèk yon kle sekirite inik ki jenere sou telefòn ou. Se sèlman ou menm ak moun w ap pale a ki gen kle pou li mesaj yo. Menm sou entènèt la, pèsonn pa ka antre ladan yo."
+                ),
+                FaqItem(
+                    question = "🔑 Kijan pou m pwoteje kont mwen ak kòd PIN, byometri ak 2FA ?",
+                    answer = "Nan ekran Sekirite sa a, ou ka aktive :\n1. Yon kòd PIN 4 chif pou louvri aplikasyon an.\n2. Dévérouyaj byometrik avèk anpwent oswa eskanè vizaj.\n3. Verifikasyon an 2 etap (2FA) 6 chif pou bloke nenpòt koneksyon sispèk."
+                ),
+                FaqItem(
+                    question = "💻 Èske sesyon James Web yo an sekirite menm jan an ?",
+                    answer = "Wi ! Koneksyon ak òdinatè a fèt avèk yon kòd sekirite 6 chif oswa yon kòd QR dinamik. Ou ka koupe nenpòt sesyon web dirèkteman sou telefòn ou nenpòt ki lè."
+                ),
+                FaqItem(
+                    question = "⚠️ Poukisa Android afiche yon avètisman pandan enstalasyon APK a ?",
+                    answer = "Android toujou mete yon mesaj sekirite estanda 'Sous inconnue' lè w telechaje yon APK dirèkteman sou sit web. Fichye James Chat ofisyèl la 100% pwòp, verifye e an sekirite. Ou ka klike sou Paramètres epi aksepte sous la san kè sote."
+                )
+            )
+        } else {
+            listOf(
+                FaqItem(
+                    question = "🔒 Pourquoi James Chat demande-t-il des permissions sur Android ?",
+                    answer = "James Chat requiert uniquement les autorisations indispensables au bon déroulement de vos conversations :\n• Microphone : Enregistrement de notes vocales et appels audio HD temps réel.\n• Caméra : Prise de photos instantanées et visioconférences WebRTC.\n• Stockage / Fichiers : Envoi et réception de documents volumineux, photos HD et films.\n• Notifications : Alertes immédiates lors de la réception d'appels ou de nouveaux messages.\nAucune donnée personnelle n'est accédée à votre insu."
+                ),
+                FaqItem(
+                    question = "🛡️ Comment fonctionne le chiffrement de bout en bout (E2EE) ?",
+                    answer = "Chaque discussion, appel et transfert de média bénéficie d'une clé cryptographique unique générée localement sur votre appareil. Seuls vous et votre interlocuteur possédez la clé permettant de déchiffrer les échanges."
+                ),
+                FaqItem(
+                    question = "🔑 Comment sécuriser mon compte avec PIN, biométrie et 2FA ?",
+                    answer = "Dans cet écran Sécurité, vous pouvez activer à tout instant :\n1. Un code PIN à 4 chiffres à l'ouverture de l'application.\n2. Le déverrouillage biométrique par empreinte digitale ou scan facial.\n3. La vérification en deux étapes (2FA) à 6 chiffres pour sécuriser les nouvelles connexions."
+                ),
+                FaqItem(
+                    question = "💻 Les sessions James Web sont-elles aussi sécurisées que l'application ?",
+                    answer = "Oui ! L'appairage avec votre navigateur sur ordinateur utilise un jeton cryptographique à 6 chiffres ou un QR Code dynamique. La session est synchronisée directement en local et peut être révoquée en un clic depuis votre téléphone."
+                ),
+                FaqItem(
+                    question = "⚠️ Pourquoi Android affiche un message 'Source inconnue' lors de l'installation ?",
+                    answer = "C'est une alerte de sécurité normale d'Android pour tout fichier APK téléchargé hors du Play Store. L'APK officiel de James Chat est 100% sûr, certifié par l'équipe officielle et sans aucun logiciel espion. Vous pouvez autoriser l'installation en toute confiance."
+                )
+            )
+        }
+    }
+
+    var expandedIndices by remember { mutableStateOf(setOf(0)) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        faqItems.forEachIndexed { index, item ->
+            val isExpanded = expandedIndices.contains(index)
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isExpanded) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        expandedIndices = if (isExpanded) {
+                            expandedIndices - index
+                        } else {
+                            expandedIndices + index
+                        }
+                    }
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = item.question,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.5.sp,
+                            color = if (isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isExpanded) "Réduire" else "Développer",
+                            tint = if (isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = isExpanded,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = item.answer,
+                                fontSize = 12.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Support Contact Card
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (isKreyol) "Èske w gen yon pwoblèm oswa yon kesyon ?" else "Besoin d'aide ou un problème ?",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.5.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = if (isKreyol) "Kontakte ekip sipò James Chat la dirèkteman pa imèl :"
+                    else "Si vous rencontrez une difficulté ou avez une question, contactez notre équipe par e-mail :",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                listOf("hangington53@gmail.com", "Lilmontero444@gmail.com").forEach { email ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .clickable {
+                                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                    data = Uri.parse("mailto:$email")
+                                    putExtra(Intent.EXTRA_SUBJECT, "Support James Chat - Demande d'assistance")
+                                }
+                                try {
+                                    context.startActivity(Intent.createChooser(intent, "Envoyer un e-mail à $email"))
+                                } catch (_: Exception) {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Support Email", email))
+                                    Toast.makeText(context, "Email copié : $email", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = email,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Support Email", email))
+                                Toast.makeText(context, "Email copié : $email", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copier",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
+        }
     }
 }

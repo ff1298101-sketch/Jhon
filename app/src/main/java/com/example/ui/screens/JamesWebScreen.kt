@@ -698,6 +698,12 @@ fun JamesWebScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 lineHeight = 16.sp
             )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SecurityFaqAccordion(currentLang = currentLang, context = context)
+
+            Spacer(modifier = Modifier.height(20.dp))
         }
         }
     }

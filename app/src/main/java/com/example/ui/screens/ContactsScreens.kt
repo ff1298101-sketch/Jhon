@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,8 +26,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AlternateEmail
@@ -36,20 +39,26 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -103,16 +112,24 @@ fun ContactsListScreen(
     onStartChatWithUser: (UserEntity) -> Unit,
     onStartCallWithUser: (UserEntity, Boolean) -> Unit
 ) {
-    val allUsers by repository.dao.getAllUsersFlow().collectAsState(initial = emptyList())
     val currentUser by repository.currentUser.collectAsState()
+    val currentUserId = currentUser?.id ?: ""
+    val myContactUsers by repository.dao.getContactUsersFlow(currentUserId).collectAsState(initial = emptyList())
+    val allUsers by repository.dao.getAllUsersFlow().collectAsState(initial = emptyList())
 
+    var selectedSectionTab by remember { mutableIntStateOf(0) } // 0: Mes Contacts, 1: Annuaire James Chat
     var searchQuery by remember { mutableStateOf("") }
     var selectedUserForSheet by remember { mutableStateOf<UserEntity?>(null) }
     var userForVideoPreview by remember { mutableStateOf<UserEntity?>(null) }
+    var userToDelete by remember { mutableStateOf<UserEntity?>(null) }
+
+    var isSyncingContacts by remember { mutableStateOf(false) }
+    var syncMessage by remember { mutableStateOf<String?>(null) }
 
     var showAddContactDialog by remember { mutableStateOf(false) }
     var showScanQrDialog by remember { mutableStateOf(false) }
     var showMyQrDialog by remember { mutableStateOf(false) }
+    var showIdVerifierDialog by remember { mutableStateOf(false) }
 
     var exactMatchedUser by remember { mutableStateOf<UserEntity?>(null) }
     var isSearchingExact by remember { mutableStateOf(false) }
@@ -126,7 +143,7 @@ fun ContactsListScreen(
             isSearchingExact = true
             delay(150)
             val match = repository.findUserByContactMethod(q)
-            exactMatchedUser = if (match != null && match.id != currentUser?.id) match else null
+            exactMatchedUser = match
             isSearchingExact = false
         } else {
             exactMatchedUser = null
@@ -134,13 +151,18 @@ fun ContactsListScreen(
         }
     }
 
-    val filteredUsers = remember(allUsers, searchQuery, currentUser, exactMatchedUser) {
-        val list = allUsers.filter { it.id != currentUser?.id && it.username.isNotEmpty() }
+    val displayUsers = remember(myContactUsers, allUsers, searchQuery, currentUser, exactMatchedUser, selectedSectionTab) {
+        val baseList = if (searchQuery.isNotBlank()) {
+            allUsers.filter { it.id != currentUser?.id && it.username.isNotEmpty() }
+        } else {
+            if (selectedSectionTab == 0) myContactUsers else allUsers.filter { it.id != currentUser?.id && it.username.isNotEmpty() }
+        }
+
         if (searchQuery.isBlank()) {
-            list
+            baseList
         } else {
             val q = searchQuery.lowercase().trim()
-            val matches = list.filter { user ->
+            val matches = baseList.filter { user ->
                 val fourCode = JamesIdentityUtil.getFourDigitId(user)
                 val tag = JamesIdentityUtil.getJamesTag(user).lowercase()
                 val customId = JamesIdentityUtil.getJamesCustomId(user).lowercase()
@@ -178,11 +200,84 @@ fun ContactsListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Header Bar: Tabs & Sync Action
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TabRow(
+                    selectedTabIndex = selectedSectionTab,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Tab(
+                        selected = selectedSectionTab == 0,
+                        onClick = { selectedSectionTab = 0 },
+                        text = { Text("Mes Contacts (${myContactUsers.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                    )
+                    Tab(
+                        selected = selectedSectionTab == 1,
+                        onClick = { selectedSectionTab = 1 },
+                        text = { Text("Annuaire Global", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                IconButton(
+                    onClick = {
+                        scope.launch {
+                            isSyncingContacts = true
+                            val res = repository.syncContacts()
+                            isSyncingContacts = false
+                            syncMessage = if (res.isSuccess) {
+                                "Contacts synchronisés avec le serveur !"
+                            } else {
+                                "Synchronisation : mode hors ligne (cache SQLite conservé)"
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("contacts_sync_btn")
+                ) {
+                    if (isSyncingContacts) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Actualiser les contacts", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            // Sync message banner
+            if (syncMessage != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = syncMessage!!, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { syncMessage = null }, modifier = Modifier.size(20.dp)) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Fermer", modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+            }
+
             // Quick Access Strip (Scan QR / Mon QR / Ajouter)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilledTonalButton(
@@ -276,76 +371,199 @@ fun ContactsListScreen(
                 }
             }
 
-            // Highlighted Exact Match Banner (if found via exact identifier)
+            // Highlighted Exact Match Banner (with full profile, chat, and call actions)
             exactMatchedUser?.let { exact ->
+                val isExactAContact = myContactUsers.any { it.id == exact.id }
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .clickable { selectedUserForSheet = exact },
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f))
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(12.dp)
                     ) {
-                        AvatarWithStatus(
-                            name = if (exact.firstName.isNotEmpty()) "${exact.firstName} ${exact.lastName}" else exact.username,
-                            avatarUrl = exact.avatarUrl,
-                            size = 46.dp
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedUserForSheet = exact },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AvatarWithStatus(
+                                name = if (exact.firstName.isNotEmpty()) "${exact.firstName} ${exact.lastName}" else exact.username,
+                                avatarUrl = exact.avatarUrl,
+                                size = 46.dp
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (exact.firstName.isNotEmpty()) "${exact.firstName} ${exact.lastName}" else exact.username,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    )
+                                    if (exact.isVerified) {
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        JamesVBadge(
+                                            size = 14.dp,
+                                            style = com.example.data.model.VBadgeStyle.fromCode(exact.verificationBadgeStyle),
+                                            userAccountName = exact.username
+                                        )
+                                    }
+                                }
                                 Text(
-                                    text = if (exact.firstName.isNotEmpty()) "${exact.firstName} ${exact.lastName}" else exact.username,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
+                                    text = "Tag: ${JamesIdentityUtil.getJamesTag(exact)} • @${exact.username}",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "✓ Vérifié",
+                                    text = "James ID: ${JamesIdentityUtil.getJamesCustomId(exact)} • Code: ${JamesIdentityUtil.getFourDigitId(exact)}",
                                     fontSize = 11.sp,
-                                    color = JamesOnlineGreen,
-                                    fontWeight = FontWeight.Bold
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                        }
+
+                        val isSelf = exact.id == currentUser?.id
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = JamesOnlineGreen,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Tag: ${JamesIdentityUtil.getJamesTag(exact)} • @${exact.username}",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.SemiBold
+                                text = if (isSelf) "PWÒP KONT PA W • ID CONFIRMÉ & OPÉRATIONNEL 🟢" else "ID REYÈL TROUVÉ & CONFIRMÉ DANS LA BASE 🟢",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = JamesOnlineGreen
                             )
                         }
-                        Button(
-                            onClick = { onStartChatWithUser(exact) },
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Chat", fontSize = 12.sp)
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        if (isSelf) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val clipboard = android.content.Context.CLIPBOARD_SERVICE
+                                        val tag = JamesIdentityUtil.getJamesTag(exact)
+                                        syncMessage = "James Tag kopye : $tag"
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Kopye Tag", fontSize = 11.sp)
+                                }
+                                Button(
+                                    onClick = { showMyQrDialog = true },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Mon QR Code", fontSize = 11.sp)
+                                }
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { selectedUserForSheet = exact },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Profil", fontSize = 11.sp)
+                                }
+
+                                Button(
+                                    onClick = { onStartChatWithUser(exact) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Chat", fontSize = 11.sp)
+                                }
+
+                                FilledTonalButton(
+                                    onClick = { onStartCallWithUser(exact, false) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Audio", fontSize = 11.sp)
+                                }
+
+                                FilledTonalButton(
+                                    onClick = { onStartCallWithUser(exact, true) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Vidéo", fontSize = 11.sp)
+                                }
+
+                                if (!isExactAContact) {
+                                    FilledTonalButton(
+                                        onClick = {
+                                            scope.launch {
+                                                repository.addContact(exact.id)
+                                                syncMessage = "Contact @${exact.username} ajouté avec succès !"
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1.1f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("+Ajout", fontSize = 11.sp)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
 
             // Contact List
-            if (filteredUsers.isEmpty()) {
+            if (displayUsers.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
                         Text(
-                            text = "🔍 Aucun contact correspondant",
+                            text = if (searchQuery.isNotBlank()) "🔍 Aucun utilisateur correspondant" else if (selectedSectionTab == 0) "📇 Aucun contact enregistré" else "Annuaire vide",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Recherchez par Tag (JAMES#XXXX), @username, ID à 4 chiffres (XXXX), James ID (JMS-XXXX) ou scannez un QR Code.",
+                            text = if (searchQuery.isNotBlank()) {
+                                "Vérifiez le format de l'identifiant : JAMES#XXXX, @username, JMS-XXXX ou scannez un QR Code."
+                            } else {
+                                "Ajoutez vos amis et collègues facilement grâce à leur James Tag (JAMES#XXXX), @username ou James ID."
+                            },
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -360,14 +578,17 @@ fun ContactsListScreen(
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(filteredUsers) { user ->
+                    items(displayUsers) { user ->
+                        val isContact = myContactUsers.any { it.id == user.id }
                         ContactItemRow(
                             user = user,
+                            isContact = isContact,
                             onOpenSheet = { selectedUserForSheet = user },
                             onStartChat = { onStartChatWithUser(user) },
                             onStartAudioCall = { onStartCallWithUser(user, false) },
                             onStartVideoCall = { onStartCallWithUser(user, true) },
-                            onWatchVideo = { userForVideoPreview = user }
+                            onWatchVideo = { userForVideoPreview = user },
+                            onDeleteContact = if (isContact) { { userToDelete = user } } else null
                         )
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
@@ -380,11 +601,47 @@ fun ContactsListScreen(
         }
     }
 
+    // Modal: Confirmation de suppression de contact
+    if (userToDelete != null) {
+        val u = userToDelete!!
+        AlertDialog(
+            onDismissRequest = { userToDelete = null },
+            title = { Text("Supprimer le contact", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    text = "Voulez-vous supprimer @${u.username} (${u.firstName} ${u.lastName}) de votre liste de contacts ? Vous pourrez le rajouter à tout moment.",
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            repository.removeContact(u.id)
+                            syncMessage = "Contact @${u.username} supprimé."
+                            userToDelete = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Supprimer", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToDelete = null }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
     // Modal: Quick Profile Sheet
     if (selectedUserForSheet != null) {
+        val target = selectedUserForSheet!!
+        val isTargetAContact = myContactUsers.any { it.id == target.id }
         QuickProfileSheet(
-            targetUser = selectedUserForSheet!!,
-            isContact = true,
+            targetUser = target,
+            isContact = isTargetAContact,
             isBlocked = false,
             lang = currentLang,
             onDismiss = { selectedUserForSheet = null },
@@ -397,7 +654,19 @@ fun ContactsListScreen(
                 onStartCallWithUser(user, isVideo)
             },
             onToggleContact = { user ->
-                scope.launch { repository.addContact(user.id) }
+                scope.launch {
+                    if (isTargetAContact) {
+                        repository.removeContact(user.id)
+                        syncMessage = "Contact @${user.username} retiré."
+                    } else {
+                        val addRes = repository.addContact(user.id)
+                        syncMessage = if (addRes.isSuccess) {
+                            "Contact @${user.username} ajouté avec succès !"
+                        } else {
+                            addRes.exceptionOrNull()?.message ?: "Erreur d'ajout"
+                        }
+                    }
+                }
             },
             onToggleBlock = { user ->
                 scope.launch { repository.setContactBlocked(user.id, true) }
@@ -455,6 +724,19 @@ fun ContactsListScreen(
             }
         )
     }
+
+    // Dialog: Verifikatè ID an Tan Reyèl
+    if (showIdVerifierDialog) {
+        RealTimeIdVerifierDialog(
+            repository = repository,
+            currentLang = currentLang,
+            onDismiss = { showIdVerifierDialog = false },
+            onStartChat = { foundUser ->
+                showIdVerifierDialog = false
+                onStartChatWithUser(foundUser)
+            }
+        )
+    }
 }
 
 @Composable
@@ -479,11 +761,13 @@ private fun MethodChip(label: String, active: Boolean, onClick: () -> Unit) {
 @Composable
 fun ContactItemRow(
     user: UserEntity,
+    isContact: Boolean = true,
     onOpenSheet: () -> Unit,
     onStartChat: () -> Unit,
     onStartAudioCall: (() -> Unit)? = null,
     onStartVideoCall: (() -> Unit)? = null,
-    onWatchVideo: (() -> Unit)? = null
+    onWatchVideo: (() -> Unit)? = null,
+    onDeleteContact: (() -> Unit)? = null
 ) {
     val fourDigit = JamesIdentityUtil.getFourDigitId(user)
     val jamesTag = JamesIdentityUtil.getJamesTag(user)
@@ -584,6 +868,16 @@ fun ContactItemRow(
                     imageVector = Icons.Default.Videocam,
                     contentDescription = "Appel vidéo",
                     tint = JamesOnlineGreen
+                )
+            }
+        }
+
+        if (isContact && onDeleteContact != null) {
+            IconButton(onClick = onDeleteContact, modifier = Modifier.testTag("contact_delete_btn_${user.id}")) {
+                Icon(
+                    imageVector = Icons.Default.PersonRemove,
+                    contentDescription = "Supprimer le contact",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                 )
             }
         }
@@ -1209,14 +1503,64 @@ fun AddContactMultiMethodDialog(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            Button(
-                                onClick = { onUserSelected(user) },
+                            var isAddedState by remember(user.id) { mutableStateOf(false) }
+                            var feedbackMessage by remember(user.id) { mutableStateOf<String?>(null) }
+                            LaunchedEffect(user.id) {
+                                isAddedState = repository.isContact(user.id)
+                            }
+
+                            if (feedbackMessage != null) {
+                                Text(
+                                    text = feedbackMessage!!,
+                                    fontSize = 11.5.sp,
+                                    color = if (isAddedState) JamesOnlineGreen else MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(bottom = 6.dp)
+                                )
+                            }
+
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Sélectionner ce profil", fontSize = 13.sp)
+                                OutlinedButton(
+                                    onClick = {
+                                        if (isAddedState) {
+                                            feedbackMessage = "Ce contact est déjà dans votre liste."
+                                        } else {
+                                            scope.launch {
+                                                val res = repository.addContact(user.id)
+                                                if (res.isSuccess) {
+                                                    isAddedState = true
+                                                    feedbackMessage = "✓ Ajouté avec succès !"
+                                                } else {
+                                                    feedbackMessage = res.exceptionOrNull()?.message ?: "Erreur d'ajout"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isAddedState) Icons.Default.CheckCircle else Icons.Default.PersonAdd,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (isAddedState) JamesOnlineGreen else MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(if (isAddedState) "En contact" else "Ajouter", fontSize = 12.sp)
+                                }
+
+                                Button(
+                                    onClick = { onUserSelected(user) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Discuter", fontSize = 12.sp)
+                                }
                             }
                         }
                     }
@@ -1233,6 +1577,371 @@ fun AddContactMultiMethodDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Fermer")
+            }
+        }
+    )
+}
+
+/**
+ * Verifikatè ID an Tan Reyèl / Testeur d'Identifiants Réels James Chat
+ * Pèmèt verifye an dirèk si tout ID yo (4 Chiffres, @Username, JMS-ID, JAMES#TAG, QR Code)
+ * mache reyèlman nan baz done a ak tout detay pwofil, estati ak bouton aksyon.
+ */
+@Composable
+fun RealTimeIdVerifierDialog(
+    repository: JamesChatRepository,
+    currentLang: AppLanguage,
+    onDismiss: () -> Unit,
+    onStartChat: (UserEntity) -> Unit
+) {
+    val currentUser by repository.currentUser.collectAsState()
+    var testQuery by remember { mutableStateOf("2001") }
+    var verifiedUser by remember { mutableStateOf<UserEntity?>(null) }
+    var isChecking by remember { mutableStateOf(false) }
+    var searchExecuted by remember { mutableStateOf(false) }
+    var copyNotice by remember { mutableStateOf<String?>(null) }
+    var addedNotice by remember { mutableStateOf<String?>(null) }
+    val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
+
+    fun verifyId(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return
+        isChecking = true
+        searchExecuted = true
+        scope.launch {
+            delay(120) // fluid UI response
+            val result = repository.findUserByContactMethod(trimmed)
+            verifiedUser = result
+            isChecking = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        verifyId("2001")
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(JamesOnlineGreen.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = JamesOnlineGreen,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text("Verifikatè ID an Tan Reyèl", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Verifye si ID yo mache reyèl nan baz done a", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = "Chwazi oswa tape yon ID pou teste :",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                OutlinedTextField(
+                    value = testQuery,
+                    onValueChange = {
+                        testQuery = it
+                        verifyId(it)
+                    },
+                    placeholder = { Text("ex: 2001, @jean_b, JMS-2002, JAMES#1002") },
+                    trailingIcon = {
+                        if (isChecking) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else if (testQuery.isNotEmpty()) {
+                            IconButton(onClick = {
+                                testQuery = ""
+                                verifiedUser = null
+                                searchExecuted = false
+                            }) {
+                                Icon(Icons.Default.Close, contentDescription = "Effacer")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Bouton tès rapid (Itilizatè Reyèl nan Baz Done a) :",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Quick test sample chips
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    item {
+                        FilterChip(
+                            selected = testQuery == "2001",
+                            onClick = {
+                                testQuery = "2001"
+                                verifyId("2001")
+                            },
+                            label = { Text("Sophie (2001)", fontSize = 10.5.sp) }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = testQuery == "2002",
+                            onClick = {
+                                testQuery = "2002"
+                                verifyId("2002")
+                            },
+                            label = { Text("Jean (2002)", fontSize = 10.5.sp) }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = testQuery == "2003",
+                            onClick = {
+                                testQuery = "2003"
+                                verifyId("2003")
+                            },
+                            label = { Text("Carlos (2003)", fontSize = 10.5.sp) }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = testQuery == "0001",
+                            onClick = {
+                                testQuery = "0001"
+                                verifyId("0001")
+                            },
+                            label = { Text("Bot (0001)", fontSize = 10.5.sp) }
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = testQuery == "1002",
+                            onClick = {
+                                testQuery = "1002"
+                                verifyId("1002")
+                            },
+                            label = { Text("Admin (1002)", fontSize = 10.5.sp) }
+                        )
+                    }
+                    if (currentUser != null && currentUser!!.fourDigitCode.isNotEmpty()) {
+                        item {
+                            FilterChip(
+                                selected = testQuery == currentUser!!.fourDigitCode,
+                                onClick = {
+                                    val code = currentUser!!.fourDigitCode
+                                    testQuery = code
+                                    verifyId(code)
+                                },
+                                label = { Text("Kont pa m (${currentUser!!.fourDigitCode})", fontSize = 10.5.sp) }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Verification Result Card
+                if (verifiedUser != null) {
+                    val user = verifiedUser!!
+                    val isSelf = currentUser?.id == user.id
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = JamesOnlineGreen.copy(alpha = 0.12f)),
+                        border = BorderStroke(1.dp, JamesOnlineGreen.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = JamesOnlineGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isSelf) "PWÒP KONT PA W (ID VALAB & REYÈL)" else "ID VALIDE ET CONFIRMÉ DANS LA BASE",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = JamesOnlineGreen
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                AvatarWithStatus(
+                                    name = if (user.firstName.isNotEmpty()) "${user.firstName} ${user.lastName}" else user.username,
+                                    avatarUrl = user.avatarUrl,
+                                    size = 46.dp
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "${user.firstName} ${user.lastName}".trim().ifEmpty { user.username },
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        if (user.isVerified) {
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            JamesVBadge(
+                                                size = 14.dp,
+                                                style = com.example.data.model.VBadgeStyle.fromCode(user.verificationBadgeStyle)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = "@${user.username} • ${user.role}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = if (user.isOnline) "🟢 En ligne actuellement" else "⚪ Hors ligne",
+                                        fontSize = 10.5.sp,
+                                        color = if (user.isOnline) JamesOnlineGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider(color = JamesOnlineGreen.copy(alpha = 0.2f))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Identification breakdown
+                            Text(text = "Détails d'identification certifiés :", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(text = "• James Tag : ${JamesIdentityUtil.getJamesTag(user)}", fontSize = 11.5.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(text = "• James ID : ${JamesIdentityUtil.getJamesCustomId(user)}", fontSize = 11.5.sp)
+                            Text(text = "• Code Unique : ${JamesIdentityUtil.getFourDigitId(user)}", fontSize = 11.5.sp)
+                            Text(text = "• Nom d'utilisateur : @${user.username}", fontSize = 11.5.sp)
+                            val badgeStyle = com.example.data.model.VBadgeStyle.fromCode(user.verificationBadgeStyle)
+                            Text(text = "• Badge V : ${if (user.isVerified) "Certifié (${badgeStyle.title})" else "Non certifié"}", fontSize = 11.sp)
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val tag = JamesIdentityUtil.getJamesTag(user)
+                                        clipboard.setText(AnnotatedString(tag))
+                                        copyNotice = "Tag kopye : $tag"
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Kopye Tag", fontSize = 10.5.sp)
+                                }
+
+                                if (!isSelf) {
+                                    FilledTonalButton(
+                                        onClick = {
+                                            scope.launch {
+                                                val res = repository.addContact(user.id)
+                                                addedNotice = if (res.isSuccess) "Kontak ajoute !" else "Deja nan kontak ou"
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(13.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Ajoute", fontSize = 10.5.sp)
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            onDismiss()
+                                            onStartChat(user)
+                                        },
+                                        modifier = Modifier.weight(1.1f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(13.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Chat", fontSize = 10.5.sp)
+                                    }
+                                }
+                            }
+
+                            if (copyNotice != null) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(text = copyNotice!!, fontSize = 11.sp, color = JamesOnlineGreen, fontWeight = FontWeight.Bold)
+                            }
+                            if (addedNotice != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = addedNotice!!, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else if (searchExecuted && !isChecking && testQuery.isNotBlank()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("ID NON TROUVÉ DANS LA BASE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Pa gen itilizatè ki gen ID '$testQuery' sa a. Eseye teste youn nan chips anwo yo (2001, 2002, 1002, 0001) oswa verifye fòma a.",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { verifyId(testQuery) }) {
+                Text("Verifye kounye a")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Fèmen")
             }
         }
     )

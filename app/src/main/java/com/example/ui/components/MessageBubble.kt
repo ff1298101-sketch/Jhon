@@ -29,7 +29,9 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Pin
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Poll
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -381,6 +383,149 @@ fun MessageBubble(
                                     tint = textColor,
                                     modifier = Modifier.size(18.dp)
                                 )
+                            }
+                        }
+                        MessageType.POLL.name -> {
+                            val pollData = message.text
+                            val rawParts = if (pollData.startsWith("POLL:")) pollData.removePrefix("POLL:").split("|") else pollData.split("\n")
+                            val question = rawParts.firstOrNull()?.trim()?.ifEmpty { "Sondage" } ?: "Sondage"
+                            val options = rawParts.drop(1).map { it.trim() }.filter { it.isNotEmpty() }.ifEmpty { listOf("Oui 👍", "Non 👎") }
+                            var userVoteIndex by remember(message.id) { mutableStateOf<Int?>(null) }
+
+                            Column(
+                                modifier = Modifier
+                                    .widthIn(min = 230.dp, max = 290.dp)
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Poll,
+                                        contentDescription = "Sondage",
+                                        tint = if (isFromMe) Color.White else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Sondage interactif",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
+                                        color = if (isFromMe) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = question,
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textColor
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                options.forEachIndexed { idx, opt ->
+                                    val isSelected = userVoteIndex == idx
+                                    val percent = if (userVoteIndex != null) {
+                                        if (isSelected) 100 else 0
+                                    } else 0
+
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isSelected) {
+                                            if (isFromMe) Color.White.copy(alpha = 0.28f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                        } else {
+                                            if (isFromMe) Color.Black.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 3.dp)
+                                            .clickable {
+                                                userVoteIndex = if (isSelected) null else idx
+                                            }
+                                    ) {
+                                        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "${if (isSelected) "✓ " else "○ "}$opt",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    color = textColor,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                if (userVoteIndex != null) {
+                                                    Text(
+                                                        text = "$percent%",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = textColor.copy(alpha = 0.85f)
+                                                    )
+                                                }
+                                            }
+                                            if (userVoteIndex != null) {
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                LinearProgressIndicator(
+                                                    progress = { percent / 100f },
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(4.dp)
+                                                        .clip(RoundedCornerShape(2.dp)),
+                                                    color = if (isFromMe) Color.White else MaterialTheme.colorScheme.primary,
+                                                    trackColor = if (isFromMe) Color.White.copy(alpha = 0.2f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (userVoteIndex != null) "✓ 1 vote enregistré • Choix unique" else "Touchez une option pour voter",
+                                    fontSize = 10.5.sp,
+                                    color = textColor.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        MessageType.LOCATION.name -> {
+                            val locText = message.text.ifEmpty { "Port-au-Prince, Haïti" }
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isFromMe) Color.Black.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
+                                modifier = Modifier
+                                    .widthIn(min = 220.dp, max = 280.dp)
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Place,
+                                            contentDescription = null,
+                                            tint = if (isFromMe) Color.White else Color(0xFFEF4444),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Position partagée",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = textColor
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = locText,
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = textColor
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "📍 Coordonnées GPS certifiées • James Chat Live",
+                                        fontSize = 10.sp,
+                                        color = textColor.copy(alpha = 0.7f)
+                                    )
+                                }
                             }
                         }
                         else -> {

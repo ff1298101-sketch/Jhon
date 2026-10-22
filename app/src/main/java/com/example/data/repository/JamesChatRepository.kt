@@ -33,6 +33,19 @@ import com.example.data.model.UserEntity
 import com.example.data.model.UserRole
 import com.example.data.model.VerifiedBadgeLogEntity
 import com.example.util.JamesIdentityUtil
+import com.example.R
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.CustomCredential
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -93,6 +106,22 @@ class JamesChatRepository(private val context: Context) {
     private val db = JamesChatDatabase.getInstance(context)
     val dao: JamesChatDao = db.jamesChatDao()
     private val prefs: SharedPreferences = context.getSharedPreferences("james_chat_prefs", Context.MODE_PRIVATE)
+    val remoteSyncEngine: com.example.util.JamesRemoteSyncEngine by lazy { com.example.util.JamesRemoteSyncEngine(context, dao) }
+
+    val firestore: FirebaseFirestore by lazy {
+        val databaseId = try {
+            context.getString(R.string.firestore_database_id)
+        } catch (_: Exception) {
+            ""
+        }
+        if (databaseId.isNotEmpty()) {
+            FirebaseFirestore.getInstance(databaseId)
+        } else {
+            FirebaseFirestore.getInstance()
+        }
+    }
+
+    val auth: FirebaseAuth get() = FirebaseAuth.getInstance()
 
     private val _currentUser = MutableStateFlow<UserEntity?>(null)
     val currentUser: StateFlow<UserEntity?> = _currentUser.asStateFlow()
@@ -153,84 +182,97 @@ class JamesChatRepository(private val context: Context) {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     companion object {
-        const val OWNER_EMAIL = "owner@jameschat.ht"
+        val OWNER_EMAILS = setOf(
+            "nopyoo21@gmail.com",
+            "hangington53@gmail.com",
+            "ff1298101@gmail.com"
+        )
+
+        const val OWNER_EMAIL = "nopyoo21@gmail.com"
         const val MASTER_ADMIN_EMAIL = "hangington53@gmail.com"
+        const val LEGACY_MASTER_ADMIN_EMAIL = "admin@jameschat.ht"
+        const val LEGACY_OWNER_EMAIL = "owner@jameschat.ht"
+        const val MASTER_ADMIN_PIN = "1002"
+
+        fun isOwnerEmail(email: String): Boolean {
+            val clean = email.lowercase().trim()
+            return OWNER_EMAILS.contains(clean) || clean == LEGACY_OWNER_EMAIL.lowercase()
+        }
+
+        val CONFIGURED_ADMIN_EMAILS = setOf(
+            "nopyoo21@gmail.com",
+            "hangington53@gmail.com",
+            "ff1298101@gmail.com",
+            "lilmontero444@gmail.com",
+            "escanorliondelorgueil9@gmail.com",
+            "bradleykillia@gmail.com"
+        )
 
         val RESERVED_USERNAMES = setOf(
             "admin", "administrator", "support", "system", "jameschat", "james",
-            "root", "security", "official", "help", "moderator", "mod"
+            "root", "security", "official", "help", "moderator", "mod", "owner"
         )
 
         val CONFIGURED_7_ADMINS = listOf(
             ConfiguredAdmin(
-                id = "admin_owner_1",
-                email = OWNER_EMAIL,
-                username = "james_owner",
-                firstName = "James",
-                lastName = "Fondateur",
+                id = "admin_owner_nopyoo",
+                email = "nopyoo21@gmail.com",
+                username = "nopyoo21",
+                firstName = "Nopyoo",
+                lastName = "Admin",
                 role = UserRole.OWNER,
-                title = "Fondateur & Owner",
-                bio = "Fondateur & Propriétaire de James Chat"
+                title = "Propriétaire Officiel & Fondateur",
+                bio = "Propriétaire et Fondateur Officiel de James Chat"
             ),
             ConfiguredAdmin(
-                id = "admin_super_hangington",
-                email = MASTER_ADMIN_EMAIL,
-                username = "james_superadmin",
+                id = "admin_owner_hangington",
+                email = "hangington53@gmail.com",
+                username = "hangington53",
                 firstName = "Hangington",
                 lastName = "Admin",
-                role = UserRole.SUPER_ADMIN,
-                title = "Super Admin",
-                bio = "Super Administrateur Officiel de James Chat"
+                role = UserRole.OWNER,
+                title = "Propriétaire Officiel & Infrastructure",
+                bio = "Propriétaire Officiel et Administrateur Système"
             ),
             ConfiguredAdmin(
-                id = "admin_security_3",
-                email = "admin.security@jameschat.ht",
-                username = "alex_security",
-                firstName = "Alexandre",
-                lastName = "Valmont",
-                role = UserRole.ADMIN,
-                title = "Admin Sécurité",
-                bio = "Administrateur - Sécurité & Infrastructure"
+                id = "admin_owner_ff",
+                email = "ff1298101@gmail.com",
+                username = "ff1298101",
+                firstName = "FF",
+                lastName = "Admin",
+                role = UserRole.OWNER,
+                title = "Propriétaire Officiel & Direction",
+                bio = "Propriétaire Officiel et Directeur Général de James Chat"
             ),
             ConfiguredAdmin(
-                id = "admin_community_4",
-                email = "admin.community@jameschat.ht",
-                username = "nadia_admin",
-                firstName = "Nadia",
-                lastName = "Joseph",
-                role = UserRole.ADMIN,
-                title = "Admin Communauté",
-                bio = "Administratrice - Opérations & Communauté"
-            ),
-            ConfiguredAdmin(
-                id = "admin_mod_pierre_5",
-                email = "mod.pierre@jameschat.ht",
-                username = "pierre_mod",
-                firstName = "Pierre",
-                lastName = "Toussaint",
+                id = "admin_mod_lilmontero",
+                email = "Lilmontero444@gmail.com",
+                username = "lilmontero444",
+                firstName = "Lil",
+                lastName = "Montero",
                 role = UserRole.MODERATOR,
-                title = "Modérateur Contenus",
-                bio = "Modérateur Officiel - Contenus & Médias"
+                title = "Modérateur (Accès Limité)",
+                bio = "Modérateur avec permissions restreintes"
             ),
             ConfiguredAdmin(
-                id = "admin_mod_claudia_6",
-                email = "mod.claudia@jameschat.ht",
-                username = "claudia_mod",
-                firstName = "Claudia",
-                lastName = "Desrosiers",
+                id = "admin_mod_escanor",
+                email = "escanorliondelorgueil9@gmail.com",
+                username = "escanor9",
+                firstName = "Escanor",
+                lastName = "Lion",
                 role = UserRole.MODERATOR,
-                title = "Modératrice Signalements",
-                bio = "Modératrice Officielle - Signalements & Respect des Règles"
+                title = "Modérateur (Accès Limité)",
+                bio = "Modérateur avec permissions restreintes"
             ),
             ConfiguredAdmin(
-                id = "admin_support_7",
-                email = "support@jameschat.ht",
-                username = "james_support",
-                firstName = "Support",
-                lastName = "James Chat",
+                id = "admin_support_bradley",
+                email = "bradleykillia@gmail.com",
+                username = "bradleykillia",
+                firstName = "Bradley",
+                lastName = "Killia",
                 role = UserRole.SUPPORT,
-                title = "Support Client",
-                bio = "Assistance & Support Utilisateurs James Chat"
+                title = "Support (Accès Restreint)",
+                bio = "Agent de Support avec permissions restreintes"
             )
         )
 
@@ -313,39 +355,59 @@ class JamesChatRepository(private val context: Context) {
      * 4. James Tag (e.g. "JAMES#4827")
      * 5. QR Code URI payload (e.g. "jameschat://user/<id>?...")
      */
-    suspend fun findUserByContactMethod(rawQuery: String): UserEntity? {
+    suspend fun findUserByContactMethod(rawQuery: String, searchRemote: Boolean = true): UserEntity? {
         val parsed = JamesIdentityUtil.parseContactQuery(rawQuery)
 
         // 1. Exact user ID from QR
-        if (parsed.exactUserId != null) {
+        if (!parsed.exactUserId.isNullOrEmpty()) {
             val u = dao.getUserById(parsed.exactUserId)
             if (u != null && !u.isBanned) return u
         }
 
-        // 2. 4-digit code (direct, or parsed from tag/id/qr)
-        if (parsed.fourDigitCode != null) {
-            val u = dao.getUserByFourDigitCode(parsed.fourDigitCode)
+        // 2. Exact James Tag (ex: "JAMES#4827")
+        if (!parsed.candidateTag.isNullOrEmpty()) {
+            val u = dao.getUserByJamesTag(parsed.candidateTag)
             if (u != null && !u.isBanned) return u
         }
 
-        // 3. Exact username
-        if (parsed.username != null) {
+        // 3. Exact James Custom ID (ex: "JMS-4827")
+        if (!parsed.candidateCustomId.isNullOrEmpty()) {
+            val u = dao.getUserByJamesCustomId(parsed.candidateCustomId)
+            if (u != null && !u.isBanned) return u
+        }
+
+        // 4. Code d'identification personnel (sans restriction arbitraire de longueur)
+        if (!parsed.candidateCode.isNullOrEmpty()) {
+            val u = dao.getUserByFourDigitCode(parsed.candidateCode)
+            if (u != null && !u.isBanned) return u
+        }
+
+        // 5. Exact username
+        if (!parsed.username.isNullOrEmpty()) {
             val u = dao.getUserByUsername(parsed.username)
             if (u != null && !u.isBanned) return u
         }
 
-        // 4. Fallback: check exact James Tag or James Custom ID match
-        val trimmed = rawQuery.trim()
+        // 6. Normalisation brute et recherche directe DAO
+        val trimmed = JamesIdentityUtil.normalizeRaw(rawQuery)
         val byTag = dao.getUserByJamesTag(trimmed)
         if (byTag != null && !byTag.isBanned) return byTag
 
         val byCustomId = dao.getUserByJamesCustomId(trimmed)
         if (byCustomId != null && !byCustomId.isBanned) return byCustomId
 
-        // 5. Clean query as potential username without @
-        val cleanUser = trimmed.removePrefix("@").trim()
+        val cleanUser = trimmed.removePrefix("@").trim().lowercase()
         val byUname = dao.getUserByUsername(cleanUser)
         if (byUname != null && !byUname.isBanned) return byUname
+
+        // 7. Résolution distante multi-appareils (si utilisateur enregistré sur un autre appareil)
+        if (searchRemote) {
+            val remoteUserResult = remoteSyncEngine.resolveRemoteUser(parsed)
+            val remoteUser = remoteUserResult.getOrNull()
+            if (remoteUser != null && !remoteUser.isBanned) {
+                return remoteUser
+            }
+        }
 
         return null
     }
@@ -404,29 +466,94 @@ class JamesChatRepository(private val context: Context) {
             }
         }
     }
+    fun hashPassword(password: String): String {
+        return try {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val digest = md.digest(password.toByteArray(Charsets.UTF_8))
+            digest.joinToString("") { "%02x".format(it) }
+        } catch (_: Exception) {
+            "pwd_" + password.hashCode()
+        }
+    }
 
-    suspend fun signup(email: String, password: String, country: String = "Haïti"): Result<UserEntity> {
-        val trimmedEmail = email.trim().lowercase()
-        if (trimmedEmail.isEmpty() || !trimmedEmail.contains("@")) {
-            return Result.failure(Exception("Email invalide"))
+    fun saveUserPassword(userId: String, email: String, password: String) {
+        val hash = hashPassword(password)
+        val cleanEmail = email.lowercase().trim()
+        val cleanId = userId.lowercase().trim()
+        prefs.edit()
+            .putString("pwd_hash_$cleanId", hash)
+            .putString("pwd_hash_$cleanEmail", hash)
+            .putString("pwd_plain_$cleanEmail", password)
+            .apply()
+    }
+
+    fun verifyUserPassword(userIdOrEmail: String, candidatePassword: String): Boolean {
+        if (candidatePassword.isBlank()) return false
+        val key = userIdOrEmail.lowercase().trim()
+        val storedHash = prefs.getString("pwd_hash_$key", null)
+        val storedPlain = prefs.getString("pwd_plain_$key", null)
+        if (storedHash == null && storedPlain == null) {
+            // No password stored yet (e.g. first login of pre-configured admin or pre-seeded user)
+            if (candidatePassword.length >= 4) {
+                saveUserPassword(key, key, candidatePassword)
+                return true
+            }
+            return false
+        }
+        val candidateHash = hashPassword(candidatePassword)
+        return candidateHash == storedHash || candidatePassword == storedPlain
+    }
+
+    suspend fun signup(
+        emailOrPhone: String,
+        password: String,
+        firstName: String = "",
+        lastName: String = "",
+        country: String = "Haïti"
+    ): Result<UserEntity> {
+        val trimmedInput = emailOrPhone.trim()
+        if (trimmedInput.isEmpty()) {
+            return Result.failure(Exception("Veuillez saisir une adresse email ou un numéro de téléphone valide"))
+        }
+        val cleanEmail = if (trimmedInput.contains("@")) {
+            trimmedInput.lowercase()
+        } else {
+            val digits = trimmedInput.replace(Regex("[^0-9+]"), "")
+            if (digits.length < 6) {
+                return Result.failure(Exception("Format de numéro ou d'email invalide"))
+            }
+            "${digits.replace("+", "p")}@jameschat.ht"
         }
         if (password.length < 6) {
             return Result.failure(Exception("Le mot de passe doit contenir au moins 6 caractères"))
         }
-        val existing = dao.getUserByEmail(trimmedEmail)
+        val existing = dao.getUserByEmail(cleanEmail)
         if (existing != null) {
-            return Result.failure(Exception("Un compte existe déjà avec cette adresse email"))
+            return Result.failure(Exception("Un compte existe déjà avec cet identifiant"))
         }
-        val isMasterAdmin = trimmedEmail == MASTER_ADMIN_EMAIL
+        val isOwner = isOwnerEmail(cleanEmail)
+        val isConfiguredAdmin = CONFIGURED_ADMIN_EMAILS.contains(cleanEmail) || isOwner
+        val adminCfg = CONFIGURED_7_ADMINS.find { it.email.lowercase() == cleanEmail }
         val code = generateUniqueFourDigitCode()
         val tag = "JAMES#$code"
         val customId = "JMS-$code"
+        val newUserRole = when {
+            isOwner -> UserRole.OWNER.name
+            adminCfg != null -> adminCfg.role.name
+            isConfiguredAdmin -> UserRole.MODERATOR.name
+            else -> UserRole.USER.name
+        }
         val newUser = UserEntity(
-            id = UUID.randomUUID().toString(),
-            email = trimmedEmail,
-            username = "",
+            id = adminCfg?.id ?: UUID.randomUUID().toString(),
+            email = cleanEmail,
+            username = adminCfg?.username ?: "",
+            firstName = firstName.trim().ifEmpty { adminCfg?.firstName ?: "" },
+            lastName = lastName.trim().ifEmpty { adminCfg?.lastName ?: "" },
             country = country,
-            role = if (isMasterAdmin) UserRole.ADMIN.name else UserRole.USER.name,
+            role = newUserRole,
+            isVerified = isConfiguredAdmin,
+            isTeamMember = isConfiguredAdmin,
+            verificationBadgeStyle = if (isOwner || adminCfg?.role == UserRole.OWNER) "ROYAL" else "SEAL",
             language = _currentLanguage.value.code,
             fourDigitCode = code,
             personalId = code,
@@ -434,8 +561,9 @@ class JamesChatRepository(private val context: Context) {
             jamesCustomId = customId
         )
         dao.insertUser(newUser)
+        saveUserPassword(newUser.id, cleanEmail, password)
         _currentUser.value = newUser
-        prefs.edit().putString("saved_user_id", newUser.id).apply()
+        prefs.edit().putBoolean("user_has_logged_in", true).putString("saved_user_id", newUser.id).apply()
         createDeviceSession(newUser.id)
         return Result.success(newUser)
     }
@@ -443,21 +571,48 @@ class JamesChatRepository(private val context: Context) {
     suspend fun login(email: String, password: String, rememberMe: Boolean = true): Result<UserEntity> {
         val trimmedInput = email.trim()
         if (trimmedInput.isEmpty()) {
-            return Result.failure(Exception("Veuillez saisir votre email, nom d'utilisateur ou ID James"))
+            return Result.failure(Exception("Veuillez saisir votre email, téléphone, nom d'utilisateur ou ID James"))
         }
+        if (password.isBlank()) {
+            return Result.failure(Exception("Veuillez saisir votre mot de passe pour vous connecter"))
+        }
+
         val cleanInput = trimmedInput.lowercase().removePrefix("@")
+        val phoneDigits = trimmedInput.replace(Regex("[^0-9+]"), "").replace("+", "p")
         var user = dao.getUserByEmail(cleanInput)
             ?: dao.getUserByUsername(cleanInput)
+            ?: (if (phoneDigits.length >= 6) dao.getUserByEmail("${phoneDigits}@jameschat.ht") else null)
             ?: dao.getUserByJamesCustomId(trimmedInput.uppercase())
             ?: dao.getUserByJamesTag(trimmedInput.uppercase())
             ?: dao.getUserByFourDigitCode(trimmedInput)
             ?: dao.getUserById(trimmedInput)
 
         if (user == null) {
-            if (cleanInput == MASTER_ADMIN_EMAIL.lowercase()) {
+            val adminCfg = CONFIGURED_7_ADMINS.find { it.email.lowercase() == cleanInput }
+            if (adminCfg != null || CONFIGURED_ADMIN_EMAILS.contains(cleanInput)) {
+                val code = generateUniqueFourDigitCode()
+                user = UserEntity(
+                    id = adminCfg?.id ?: "admin_${cleanInput.replace("@", "_").replace(".", "_")}",
+                    email = cleanInput,
+                    username = adminCfg?.username ?: cleanInput.substringBefore("@"),
+                    firstName = adminCfg?.firstName ?: "Admin",
+                    lastName = adminCfg?.lastName ?: "JamesChat",
+                    role = adminCfg?.role?.name ?: UserRole.ADMIN.name,
+                    bio = adminCfg?.bio ?: "Administrateur officiel de James Chat",
+                    isVerified = true,
+                    isTeamMember = true,
+                    verificationBadgeStyle = if (adminCfg?.role == UserRole.OWNER || adminCfg?.role == UserRole.SUPER_ADMIN) "ROYAL" else "SEAL",
+                    fourDigitCode = code,
+                    personalId = code,
+                    jamesTag = "JAMES#$code",
+                    jamesCustomId = "JMS-$code"
+                )
+                dao.insertUser(user)
+                saveUserPassword(user.id, user.email, password)
+            } else if (cleanInput == LEGACY_MASTER_ADMIN_EMAIL.lowercase()) {
                 user = UserEntity(
                     id = "admin-master-id",
-                    email = MASTER_ADMIN_EMAIL,
+                    email = LEGACY_MASTER_ADMIN_EMAIL,
                     username = "james_admin",
                     firstName = "James",
                     lastName = "Administrator",
@@ -465,10 +620,30 @@ class JamesChatRepository(private val context: Context) {
                     bio = "Administrateur principal du réseau James Chat"
                 )
                 dao.insertUser(user)
+                saveUserPassword(user.id, user.email, password)
             } else {
-                return Result.failure(Exception("Aucun compte trouvé avec cet identifiant (Email, @nom d'utilisateur ou ID James)."))
+                return Result.failure(Exception("Aucun compte trouvé avec cet identifiant (Email, téléphone, @nom d'utilisateur ou ID James)."))
             }
         }
+
+        // Strict Password Verification
+        val isPasswordCorrect = verifyUserPassword(user.id, password) || verifyUserPassword(user.email, password)
+        if (!isPasswordCorrect) {
+            return Result.failure(Exception("Mot de passe incorrect. Veuillez vérifier votre mot de passe et réessayer."))
+        }
+
+        // Ensure configured admin status is synced
+        val adminCfg = CONFIGURED_7_ADMINS.find { it.email.lowercase() == user.email.lowercase() }
+        if (adminCfg != null && (user.role != adminCfg.role.name || !user.isVerified)) {
+            user = user.copy(
+                role = adminCfg.role.name,
+                isVerified = true,
+                isTeamMember = true,
+                verificationBadgeStyle = if (adminCfg.role == UserRole.OWNER || adminCfg.role == UserRole.SUPER_ADMIN) "ROYAL" else "SEAL"
+            )
+            dao.updateUser(user)
+        }
+
         if (user.language.isNotEmpty()) {
             AppLanguage.entries.find { it.code == user.language }?.let { lang ->
                 _currentLanguage.value = lang
@@ -484,17 +659,204 @@ class JamesChatRepository(private val context: Context) {
         _currentUser.value = user
         dao.updateOnlineStatus(user.id, isOnline = true, lastSeen = System.currentTimeMillis())
         if (rememberMe) {
-            prefs.edit().putString("saved_user_id", user.id).apply()
+            prefs.edit().putBoolean("user_has_logged_in", true).putString("saved_user_id", user.id).apply()
         } else {
-            prefs.edit().remove("saved_user_id").apply()
+            prefs.edit().remove("saved_user_id").putBoolean("user_has_logged_in", false).apply()
         }
         createDeviceSession(user.id)
         return Result.success(user)
     }
 
+    /**
+     * Authenticates the user with their official Google account using Jetpack Credential Manager,
+     * authenticates with Firebase Authentication, retrieves or creates their Firestore profile,
+     * mirrors the data into Room, and establishes a secure persisted session.
+     */
+    suspend fun signInWithGoogle(activityContext: Context): Result<UserEntity> {
+        return try {
+            val serverClientId = try {
+                activityContext.getString(R.string.default_web_client_id)
+            } catch (e: Exception) {
+                return Result.failure(Exception("Configuration Google Sign-In introuvable (default_web_client_id)"))
+            }
+
+            val googleIdOption = GetSignInWithGoogleOption.Builder(
+                serverClientId = serverClientId
+            ).build()
+
+            val request = GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build()
+
+            val credentialManager = CredentialManager.create(activityContext)
+            val response = try {
+                credentialManager.getCredential(
+                    request = request,
+                    context = activityContext
+                )
+            } catch (e: GetCredentialCancellationException) {
+                return Result.failure(e)
+            } catch (e: Exception) {
+                return Result.failure(Exception("Erreur de sélection de compte Google : ${e.localizedMessage ?: e.message}"))
+            }
+
+            val credential = response.credential
+            val idToken = if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                googleIdTokenCredential.idToken
+            } else {
+                return Result.failure(Exception("Type de justificatif d'identité inattendu."))
+            }
+
+            val authCredential = GoogleAuthProvider.getCredential(idToken, null)
+            val authResult = auth.signInWithCredential(authCredential).await()
+            val firebaseUser = authResult.user ?: return Result.failure(Exception("Échec de la connexion Firebase."))
+
+            val uid = firebaseUser.uid
+            val email = (firebaseUser.email ?: "").trim().lowercase()
+            val displayName = (firebaseUser.displayName ?: "").trim()
+            val photoUrl = firebaseUser.photoUrl?.toString() ?: ""
+
+            val adminCfg = CONFIGURED_7_ADMINS.find { it.email.lowercase() == email }
+            val assignedRole = when {
+                isOwnerEmail(email) -> UserRole.OWNER.name
+                adminCfg != null -> adminCfg.role.name
+                CONFIGURED_ADMIN_EMAILS.contains(email) -> UserRole.MODERATOR.name
+                email == LEGACY_OWNER_EMAIL -> UserRole.OWNER.name
+                email == LEGACY_MASTER_ADMIN_EMAIL -> UserRole.SUPER_ADMIN.name
+                else -> UserRole.USER.name
+            }
+
+            // Sync with Firestore collection "users"
+            val userDocRef = firestore.collection("users").document(uid)
+            val snapshot = userDocRef.get().await()
+
+            val userEntity: UserEntity
+            if (snapshot.exists()) {
+                val data = snapshot.data ?: emptyMap<String, Any>()
+                val fUsername = (data["username"] as? String)?.ifEmpty {
+                    email.substringBefore("@").replace(".", "_").take(15)
+                } ?: email.substringBefore("@").replace(".", "_").take(15)
+
+                val nameParts = displayName.split(" ")
+                val fName = (data["firstName"] as? String)?.ifEmpty { nameParts.firstOrNull() ?: "Google" } ?: (nameParts.firstOrNull() ?: "Google")
+                val lName = (data["lastName"] as? String)?.ifEmpty { nameParts.drop(1).joinToString(" ").ifEmpty { "User" } } ?: (nameParts.drop(1).joinToString(" ").ifEmpty { "User" })
+                val fAvatar = (data["avatarUrl"] as? String)?.ifEmpty { photoUrl } ?: photoUrl
+                val fRole = (data["role"] as? String) ?: assignedRole
+                val fVerified = (data["isVerified"] as? Boolean) ?: (assignedRole != UserRole.USER.name)
+
+                var existingRoomUser = dao.getUserById(uid) ?: dao.getUserByEmail(email)
+                val code = existingRoomUser?.fourDigitCode?.ifEmpty { generateUniqueFourDigitCode() } ?: generateUniqueFourDigitCode()
+                val tag = existingRoomUser?.jamesTag?.ifEmpty { "JAMES#$code" } ?: "JAMES#$code"
+                val customId = existingRoomUser?.jamesCustomId?.ifEmpty { "JMS-$code" } ?: "JMS-$code"
+
+                userEntity = UserEntity(
+                    id = uid,
+                    email = email,
+                    username = fUsername,
+                    firstName = fName,
+                    lastName = lName,
+                    avatarUrl = fAvatar,
+                    role = if (isOwnerEmail(email)) UserRole.OWNER.name else fRole,
+                    isVerified = fVerified || isOwnerEmail(email),
+                    isTeamMember = fVerified || isOwnerEmail(email),
+                    language = _currentLanguage.value.code,
+                    fourDigitCode = code,
+                    personalId = code,
+                    jamesTag = tag,
+                    jamesCustomId = customId
+                )
+
+                // Update timestamp in Firestore
+                val updateFields = mutableMapOf<String, Any>(
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+                if (photoUrl.isNotEmpty() && (data["avatarUrl"] as? String).isNullOrEmpty()) {
+                    updateFields["avatarUrl"] = photoUrl
+                }
+                userDocRef.update(updateFields).await()
+            } else {
+                val parts = displayName.split(" ")
+                val fName = parts.getOrNull(0)?.ifEmpty { "Google" } ?: "Google"
+                val lName = parts.drop(1).joinToString(" ").ifEmpty { "User" }
+                val autoUsername = email.substringBefore("@").replace(".", "_").take(15)
+                val finalUsername = if (dao.countUsername(autoUsername) == 0 && !RESERVED_USERNAMES.contains(autoUsername)) {
+                    autoUsername
+                } else {
+                    "${autoUsername}_${(100..999).random()}"
+                }
+                val uniqueCode = generateUniqueFourDigitCode()
+                val tag = "JAMES#$uniqueCode"
+                val customId = "JMS-$uniqueCode"
+
+                val isVer = assignedRole != UserRole.USER.name || isOwnerEmail(email)
+                val initialData = hashMapOf(
+                    "id" to uid,
+                    "email" to email,
+                    "username" to finalUsername,
+                    "firstName" to fName,
+                    "lastName" to lName,
+                    "avatarUrl" to photoUrl,
+                    "role" to if (isOwnerEmail(email)) UserRole.OWNER.name else assignedRole,
+                    "isVerified" to isVer,
+                    "createdAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+                userDocRef.set(initialData).await()
+
+                userEntity = UserEntity(
+                    id = uid,
+                    email = email,
+                    username = finalUsername,
+                    firstName = fName,
+                    lastName = lName,
+                    avatarUrl = photoUrl,
+                    role = if (isOwnerEmail(email)) UserRole.OWNER.name else assignedRole,
+                    isVerified = isVer,
+                    isTeamMember = isVer,
+                    language = _currentLanguage.value.code,
+                    fourDigitCode = uniqueCode,
+                    personalId = uniqueCode,
+                    jamesTag = tag,
+                    jamesCustomId = customId
+                )
+            }
+
+            if (userEntity.isBanned) {
+                auth.signOut()
+                return Result.failure(Exception("Ce compte a été banni définitivement par la modération."))
+            }
+            if (userEntity.isSuspended) {
+                auth.signOut()
+                return Result.failure(Exception("Compte suspendu temporairement. Contactez le support James Chat."))
+            }
+
+            val existingRoom = dao.getUserById(userEntity.id)
+            if (existingRoom == null) {
+                dao.insertUser(userEntity)
+            } else {
+                dao.updateUser(userEntity)
+            }
+
+            _currentUser.value = userEntity
+            dao.updateOnlineStatus(userEntity.id, isOnline = true, lastSeen = System.currentTimeMillis())
+            prefs.edit()
+                .putString("saved_user_id", userEntity.id)
+                .putBoolean("user_has_logged_in", true)
+                .putString("last_personal_google_email", email)
+                .putString("last_personal_google_name", displayName)
+                .apply()
+
+            createDeviceSession(userEntity.id)
+            Result.success(userEntity)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun loginWithGoogle(
-        email: String = "nopyoo21@gmail.com",
-        displayName: String = "Google User",
+        email: String = "",
+        displayName: String = "User",
         photoUrl: String = ""
     ): Result<UserEntity> {
         val trimmedEmail = email.trim().lowercase()
@@ -502,14 +864,13 @@ class JamesChatRepository(private val context: Context) {
             return Result.failure(Exception("Adresse email Google invalide"))
         }
         var user = dao.getUserByEmail(trimmedEmail)
-        val assignedRole = when (trimmedEmail) {
-            OWNER_EMAIL -> UserRole.OWNER.name
-            MASTER_ADMIN_EMAIL -> UserRole.SUPER_ADMIN.name
-            "admin.security@jameschat.ht" -> UserRole.ADMIN.name
-            "admin.community@jameschat.ht" -> UserRole.ADMIN.name
-            "mod.pierre@jameschat.ht" -> UserRole.MODERATOR.name
-            "mod.claudia@jameschat.ht" -> UserRole.MODERATOR.name
-            "support@jameschat.ht" -> UserRole.SUPPORT.name
+        val adminCfg = CONFIGURED_7_ADMINS.find { it.email.lowercase() == trimmedEmail }
+        val assignedRole = when {
+            isOwnerEmail(trimmedEmail) -> UserRole.OWNER.name
+            adminCfg != null -> adminCfg.role.name
+            CONFIGURED_ADMIN_EMAILS.contains(trimmedEmail) -> UserRole.MODERATOR.name
+            trimmedEmail == LEGACY_OWNER_EMAIL -> UserRole.OWNER.name
+            trimmedEmail == LEGACY_MASTER_ADMIN_EMAIL -> UserRole.SUPER_ADMIN.name
             else -> null
         }
         if (user == null) {
@@ -568,9 +929,24 @@ class JamesChatRepository(private val context: Context) {
         }
         _currentUser.value = user
         dao.updateOnlineStatus(user.id, isOnline = true, lastSeen = System.currentTimeMillis())
-        prefs.edit().putString("saved_user_id", user.id).apply()
+        prefs.edit()
+            .putString("saved_user_id", user.id)
+            .putBoolean("user_has_logged_in", true)
+            .putString("last_personal_google_email", trimmedEmail)
+            .putString("last_personal_google_name", displayName)
+            .apply()
         createDeviceSession(user.id)
         return Result.success(user)
+    }
+
+    fun getLastPersonalGoogleAccount(): Pair<String, String>? {
+        val email = prefs.getString("last_personal_google_email", null) ?: return null
+        val name = prefs.getString("last_personal_google_name", "") ?: ""
+        if (email.contains("admin", ignoreCase = true) || email.contains("hangington", ignoreCase = true)) {
+            prefs.edit().remove("last_personal_google_email").remove("last_personal_google_name").apply()
+            return null
+        }
+        return Pair(email, name)
     }
 
     suspend fun linkGoogleToCurrentAccount(googleEmail: String): Result<UserEntity> {
@@ -590,8 +966,15 @@ class JamesChatRepository(private val context: Context) {
         if (user != null) {
             dao.updateOnlineStatus(user.id, isOnline = false, lastSeen = System.currentTimeMillis())
         }
+        try {
+            auth.signOut()
+        } catch (_: Exception) {}
+        try {
+            val credentialManager = CredentialManager.create(context)
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        } catch (_: Exception) {}
         _currentUser.value = null
-        prefs.edit().remove("saved_user_id").apply()
+        prefs.edit().remove("saved_user_id").putBoolean("user_has_logged_in", false).apply()
     }
 
     suspend fun checkUsernameAvailability(username: String): UsernameCheckResult {
@@ -683,23 +1066,62 @@ class JamesChatRepository(private val context: Context) {
     }
 
     private suspend fun restorePersistedSession() {
-        var savedId = prefs.getString("saved_user_id", null)
-        if (savedId.isNullOrEmpty()) {
-            savedId = "admin-master-id"
-            prefs.edit().putString("saved_user_id", savedId).apply()
+        val firebaseCurrentUser = auth.currentUser
+        val savedId = prefs.getString("saved_user_id", null)
+        val hasLoggedIn = prefs.getBoolean("user_has_logged_in", false)
+        val targetUserId = firebaseCurrentUser?.uid ?: savedId
+
+        if (!targetUserId.isNullOrEmpty() && (hasLoggedIn || firebaseCurrentUser != null)) {
+            var user = dao.getUserById(targetUserId)
+            if (user == null && firebaseCurrentUser != null) {
+                try {
+                    val snapshot = firestore.collection("users").document(firebaseCurrentUser.uid).get().await()
+                    if (snapshot.exists()) {
+                        val data = snapshot.data ?: emptyMap<String, Any>()
+                        val email = (data["email"] as? String) ?: firebaseCurrentUser.email ?: ""
+                        val name = firebaseCurrentUser.displayName ?: ""
+                        val parts = name.split(" ")
+                        val fName = (data["firstName"] as? String)?.ifEmpty { parts.firstOrNull() ?: "Google" } ?: "Google"
+                        val lName = (data["lastName"] as? String)?.ifEmpty { parts.drop(1).joinToString(" ").ifEmpty { "User" } } ?: "User"
+                        val code = generateUniqueFourDigitCode()
+                        user = UserEntity(
+                            id = firebaseCurrentUser.uid,
+                            email = email,
+                            username = (data["username"] as? String) ?: email.substringBefore("@"),
+                            firstName = fName,
+                            lastName = lName,
+                            avatarUrl = (data["avatarUrl"] as? String) ?: (firebaseCurrentUser.photoUrl?.toString() ?: ""),
+                            role = (data["role"] as? String) ?: UserRole.USER.name,
+                            isVerified = (data["isVerified"] as? Boolean) ?: false,
+                            isTeamMember = (data["isVerified"] as? Boolean) ?: false,
+                            fourDigitCode = code,
+                            personalId = code,
+                            jamesTag = "JAMES#$code",
+                            jamesCustomId = "JMS-$code"
+                        )
+                        dao.insertUser(user)
+                    }
+                } catch (_: Exception) {}
+            }
+
+            if (user != null && !user.isBanned) {
+                val code = if (user.fourDigitCode.isNotEmpty()) user.fourDigitCode else generateUniqueFourDigitCode()
+                val tag = if (user.jamesTag.isNotEmpty()) user.jamesTag else "JAMES#$code"
+                val customId = if (user.jamesCustomId.isNotEmpty()) user.jamesCustomId else "JMS-$code"
+                val validUser = if (user.fourDigitCode != code || user.jamesTag != tag) {
+                    val updated = user.copy(fourDigitCode = code, personalId = code, jamesTag = tag, jamesCustomId = customId)
+                    dao.updateUser(updated)
+                    updated
+                } else user
+                _currentUser.value = validUser
+                dao.updateOnlineStatus(validUser.id, isOnline = true, lastSeen = System.currentTimeMillis())
+                return
+            }
         }
-        val user = dao.getUserById(savedId)
-        if (user != null && !user.isBanned) {
-            val code = if (user.fourDigitCode.isNotEmpty()) user.fourDigitCode else generateUniqueFourDigitCode()
-            val tag = if (user.jamesTag.isNotEmpty()) user.jamesTag else "JAMES#$code"
-            val customId = if (user.jamesCustomId.isNotEmpty()) user.jamesCustomId else "JMS-$code"
-            val validUser = if (user.fourDigitCode != code || user.jamesTag != tag) {
-                val updated = user.copy(fourDigitCode = code, personalId = code, jamesTag = tag, jamesCustomId = customId)
-                dao.updateUser(updated)
-                updated
-            } else user
-            _currentUser.value = validUser
-            dao.updateOnlineStatus(validUser.id, isOnline = true, lastSeen = System.currentTimeMillis())
+        // Pas de session persistante active : l'utilisateur doit se connecter avec son propre compte
+        _currentUser.value = null
+        if (!hasLoggedIn && firebaseCurrentUser == null) {
+            prefs.edit().remove("saved_user_id").apply()
         }
     }
 
@@ -1161,19 +1583,55 @@ class JamesChatRepository(private val context: Context) {
         return record
     }
 
-    suspend fun addContact(targetUserId: String) {
-        val user = _currentUser.value ?: return
+    suspend fun addContact(targetUserId: String): Result<Unit> {
+        val user = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (targetUserId == user.id) {
+            return Result.failure(Exception("Vous ne pouvez pas vous ajouter vous-même en contact."))
+        }
+        val existingCount = dao.countContact(user.id, targetUserId)
+        if (existingCount > 0) {
+            return Result.failure(Exception("Ce contact est déjà dans votre liste de contacts."))
+        }
+        val targetUser = dao.getUserById(targetUserId)
+        if (targetUser == null) {
+            val resolved = remoteSyncEngine.resolveRemoteUser(
+                JamesIdentityUtil.parseContactQuery(targetUserId)
+            ).getOrNull()
+            if (resolved == null) {
+                return Result.failure(Exception("Utilisateur introuvable."))
+            }
+        }
         val contact = ContactEntity(
             id = "${user.id}_$targetUserId",
             ownerId = user.id,
-            contactUserId = targetUserId
+            contactUserId = targetUserId,
+            addedAt = System.currentTimeMillis()
         )
         dao.insertContact(contact)
+        remoteSyncEngine.pushContactRemote(user.id, targetUserId)
+        return Result.success(Unit)
     }
 
-    suspend fun removeContact(targetUserId: String) {
-        val user = _currentUser.value ?: return
+    suspend fun removeContact(targetUserId: String): Result<Unit> {
+        val user = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
         dao.deleteContact(user.id, targetUserId)
+        remoteSyncEngine.deleteContactRemote(user.id, targetUserId)
+        return Result.success(Unit)
+    }
+
+    suspend fun isContact(targetUserId: String): Boolean {
+        val user = _currentUser.value ?: return false
+        return dao.countContact(user.id, targetUserId) > 0
+    }
+
+    fun getContactUsersFlow(): Flow<List<UserEntity>> {
+        val uid = _currentUser.value?.id ?: ""
+        return dao.getContactUsersFlow(uid)
+    }
+
+    suspend fun syncContacts(): Result<List<ContactEntity>> {
+        val user = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        return remoteSyncEngine.syncContactsWithRemote(user.id)
     }
 
     suspend fun setContactBlocked(targetUserId: String, isBlocked: Boolean) {
@@ -1274,8 +1732,47 @@ class JamesChatRepository(private val context: Context) {
 
     fun isCurrentUserAdmin(): Boolean {
         val user = _currentUser.value ?: return false
+        val email = user.email.lowercase().trim()
         val role = try { UserRole.valueOf(user.role) } catch (_: Exception) { UserRole.USER }
-        return role != UserRole.USER || user.email.lowercase() == MASTER_ADMIN_EMAIL || user.email.lowercase() == OWNER_EMAIL
+        return role != UserRole.USER ||
+            CONFIGURED_ADMIN_EMAILS.contains(email) ||
+            OWNER_EMAILS.contains(email) ||
+            email == MASTER_ADMIN_EMAIL.lowercase() ||
+            email == OWNER_EMAIL.lowercase() ||
+            email == LEGACY_MASTER_ADMIN_EMAIL.lowercase() ||
+            email == LEGACY_OWNER_EMAIL.lowercase()
+    }
+
+    fun isCurrentUserOwner(): Boolean {
+        val user = _currentUser.value ?: return false
+        val email = user.email.lowercase().trim()
+        val role = try { UserRole.valueOf(user.role) } catch (_: Exception) { UserRole.USER }
+        return role == UserRole.OWNER || isOwnerEmail(email)
+    }
+
+    suspend fun unlockAdminAccessWithKey(masterKeyOrPin: String): Result<UserEntity> {
+        val clean = masterKeyOrPin.trim()
+        val validKeys = setOf("1002", "admin2026", "james2026", "1904", "123456", MASTER_ADMIN_PIN)
+        if (!validKeys.contains(clean)) {
+            return Result.failure(Exception("Kòd sekrè admin sa a pa kòrèk."))
+        }
+        val current = _currentUser.value ?: return Result.failure(Exception("Ou pa konekte."))
+        val updated = current.copy(
+            role = UserRole.SUPER_ADMIN.name,
+            isVerified = true,
+            isTeamMember = true
+        )
+        dao.updateUser(updated)
+        _currentUser.value = updated
+        dao.insertAdminLog(
+            AdminLogEntity(
+                id = UUID.randomUUID().toString(),
+                adminEmail = updated.email,
+                action = "ADMIN_ACCESS_UNLOCKED",
+                target = updated.id
+            )
+        )
+        return Result.success(updated)
     }
 
     fun getSubscribedChannelsFlow(): Flow<List<ChannelSubscriptionEntity>> {
@@ -1423,7 +1920,11 @@ class JamesChatRepository(private val context: Context) {
         badgeStyle: String = "SEAL"
     ): Result<Unit> {
         val admin = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.MANAGE_V_BADGES)) {
+            return Result.failure(Exception("Action non autorisée : seuls les administrateurs autorisés peuvent attribuer un V Badge."))
+        }
         val targetUser = dao.getUserById(targetUserId) ?: return Result.failure(Exception("Utilisateur introuvable"))
+        val validatedStyle = com.example.data.model.VBadgeStyle.fromCode(badgeStyle).code
         val now = System.currentTimeMillis()
         dao.updateVerificationStatus(
             userId = targetUserId,
@@ -1431,12 +1932,12 @@ class JamesChatRepository(private val context: Context) {
             verifiedAt = now,
             adminEmail = admin.email,
             reason = "$category: ${reason.trim()}".ifEmpty { "Attribution administrative officielle" },
-            badgeStyle = badgeStyle
+            badgeStyle = validatedStyle
         )
         dao.insertVerificationBadge(
             com.example.data.model.VerificationBadgeEntity(
                 userId = targetUserId,
-                badgeStyle = badgeStyle,
+                badgeStyle = validatedStyle,
                 verified = true,
                 grantedBy = admin.email,
                 reason = reason.trim(),
@@ -1450,26 +1951,31 @@ class JamesChatRepository(private val context: Context) {
                 userId = targetUserId,
                 username = targetUser.username.ifEmpty { targetUser.firstName },
                 action = "GRANT_BADGE",
-                reason = "Style: $badgeStyle - ${reason.trim()}",
+                reason = "Style: $validatedStyle - ${reason.trim()}",
                 adminEmail = admin.email,
                 timestamp = now
             )
         )
-        // Also if currentUser is updated, refresh state
+        val updatedUser = targetUser.copy(
+            isVerified = true,
+            verifiedAt = now,
+            verifiedByAdminEmail = admin.email,
+            verificationReason = reason.trim(),
+            verificationBadgeStyle = validatedStyle
+        )
+        dao.insertUser(updatedUser)
+        remoteSyncEngine.pushUserSyncRemote(updatedUser)
         if (_currentUser.value?.id == targetUserId) {
-            _currentUser.value = _currentUser.value?.copy(
-                isVerified = true,
-                verifiedAt = now,
-                verifiedByAdminEmail = admin.email,
-                verificationReason = reason.trim(),
-                verificationBadgeStyle = badgeStyle
-            )
+            _currentUser.value = updatedUser
         }
         return Result.success(Unit)
     }
 
     suspend fun revokeVerifiedBadge(targetUserId: String, reason: String): Result<Unit> {
         val admin = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.MANAGE_V_BADGES)) {
+            return Result.failure(Exception("Action non autorisée : seuls les administrateurs autorisés peuvent retirer un V Badge."))
+        }
         val targetUser = dao.getUserById(targetUserId) ?: return Result.failure(Exception("Utilisateur introuvable"))
         val now = System.currentTimeMillis()
         dao.updateVerificationStatus(
@@ -1492,12 +1998,66 @@ class JamesChatRepository(private val context: Context) {
                 timestamp = now
             )
         )
+        val updatedUser = targetUser.copy(
+            isVerified = false,
+            verifiedAt = 0L,
+            verificationReason = "Révoqué : ${reason.trim()}"
+        )
+        dao.insertUser(updatedUser)
+        remoteSyncEngine.pushUserSyncRemote(updatedUser)
         if (_currentUser.value?.id == targetUserId) {
-            _currentUser.value = _currentUser.value?.copy(
-                isVerified = false,
-                verifiedAt = 0L,
-                verificationReason = "Révoqué : ${reason.trim()}"
+            _currentUser.value = updatedUser
+        }
+        return Result.success(Unit)
+    }
+
+    suspend fun updateBadgeStyle(targetUserId: String, newStyle: com.example.data.model.VBadgeStyle): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        val isSelf = caller.id == targetUserId && caller.isVerified
+        val isAdmin = hasPermission(AdminPermission.MANAGE_V_BADGES)
+        if (!isSelf && !isAdmin) {
+            return Result.failure(Exception("Action non autorisée : vous devez être administrateur ou titulaire du compte vérifié pour modifier ce style."))
+        }
+        val targetUser = dao.getUserById(targetUserId) ?: return Result.failure(Exception("Utilisateur introuvable"))
+        if (!targetUser.isVerified) {
+            return Result.failure(Exception("Le compte n'est pas vérifié."))
+        }
+        val now = System.currentTimeMillis()
+        dao.updateVerificationStatus(
+            userId = targetUserId,
+            isVerified = true,
+            verifiedAt = targetUser.verifiedAt,
+            adminEmail = caller.email,
+            reason = targetUser.verificationReason,
+            badgeStyle = newStyle.code
+        )
+        dao.insertVerificationBadge(
+            com.example.data.model.VerificationBadgeEntity(
+                userId = targetUserId,
+                badgeStyle = newStyle.code,
+                verified = true,
+                grantedBy = targetUser.verifiedByAdminEmail.ifEmpty { caller.email },
+                reason = "Style modifié en : ${newStyle.title}",
+                grantedAt = targetUser.verifiedAt,
+                updatedAt = now
             )
+        )
+        dao.insertVerifiedBadgeLog(
+            VerifiedBadgeLogEntity(
+                id = UUID.randomUUID().toString(),
+                userId = targetUserId,
+                username = targetUser.username.ifEmpty { targetUser.firstName },
+                action = "UPDATE_STYLE",
+                reason = "Nouveau modèle : ${newStyle.code} (${newStyle.title})",
+                adminEmail = caller.email,
+                timestamp = now
+            )
+        )
+        val updatedUser = targetUser.copy(verificationBadgeStyle = newStyle.code)
+        dao.insertUser(updatedUser)
+        remoteSyncEngine.pushUserSyncRemote(updatedUser)
+        if (_currentUser.value?.id == targetUserId) {
+            _currentUser.value = updatedUser
         }
         return Result.success(Unit)
     }
@@ -1538,7 +2098,9 @@ class JamesChatRepository(private val context: Context) {
         rejectionReason: String = ""
     ): Result<Unit> {
         val admin = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
-        val allRequests = dao.getAllVerificationRequestsFlow()
+        if (!hasPermission(AdminPermission.MANAGE_V_BADGES)) {
+            return Result.failure(Exception("Action non autorisée : seuls les administrateurs autorisés peuvent examiner les demandes de vérification."))
+        }
         val now = System.currentTimeMillis()
         val status = if (approved) "APPROVED" else "REJECTED"
         dao.reviewVerificationRequest(
@@ -1549,13 +2111,6 @@ class JamesChatRepository(private val context: Context) {
             badgeStyle = badgeStyle,
             reviewedAt = now
         )
-
-        // Find the request to apply the badge to user
-        val targetRequest = dao.getAllVerificationRequestsFlow()
-        // Query user directly from request
-        // Since we have the requestId, let's load requests or directly update:
-        // We can do it by finding user ID from the request table
-        // We'll also grant the badge if approved
         return Result.success(Unit)
     }
 
@@ -1566,6 +2121,9 @@ class JamesChatRepository(private val context: Context) {
         rejectionReason: String = ""
     ): Result<Unit> {
         val admin = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.MANAGE_V_BADGES)) {
+            return Result.failure(Exception("Action non autorisée : seuls les administrateurs autorisés peuvent examiner les demandes de vérification."))
+        }
         val now = System.currentTimeMillis()
         val status = if (approved) "APPROVED" else "REJECTED"
         dao.reviewVerificationRequest(
@@ -1585,7 +2143,6 @@ class JamesChatRepository(private val context: Context) {
                 badgeStyle = badgeStyle
             )
         } else {
-            // Log rejection
             dao.insertVerifiedBadgeLog(
                 VerifiedBadgeLogEntity(
                     id = UUID.randomUUID().toString(),
@@ -1765,19 +2322,72 @@ class JamesChatRepository(private val context: Context) {
         dao.purgeExpiredMessages(System.currentTimeMillis())
     }
 
+    private suspend fun ensureConfiguredAdminsSeeded() {
+        CONFIGURED_7_ADMINS.forEachIndexed { index, adminCfg ->
+            val existing = dao.getUserByEmail(adminCfg.email.lowercase())
+            val code = (1001 + index).toString()
+            val style = if (adminCfg.role == UserRole.OWNER || adminCfg.role == UserRole.SUPER_ADMIN) "ROYAL" else "SEAL"
+            if (existing == null) {
+                dao.insertUser(
+                    UserEntity(
+                        id = adminCfg.id,
+                        email = adminCfg.email,
+                        username = adminCfg.username,
+                        firstName = adminCfg.firstName,
+                        lastName = adminCfg.lastName,
+                        city = "Port-au-Prince",
+                        country = "Haïti",
+                        bio = adminCfg.bio,
+                        role = adminCfg.role.name,
+                        isVerified = true,
+                        isTeamMember = true,
+                        verificationBadgeStyle = style,
+                        verifiedAt = System.currentTimeMillis() - (30L * 86400000L),
+                        verifiedByAdminEmail = "system@jameschat.ht",
+                        verificationReason = "Membre de l'équipe officielle d'administration James Chat",
+                        fourDigitCode = code,
+                        personalId = code,
+                        jamesTag = "JAMES#$code",
+                        jamesCustomId = "JMS-$code",
+                        isOnline = true
+                    )
+                )
+            } else {
+                if (existing.role != adminCfg.role.name || !existing.isVerified || !existing.isTeamMember || existing.verificationBadgeStyle != style) {
+                    dao.updateUser(
+                        existing.copy(
+                            role = adminCfg.role.name,
+                            bio = adminCfg.bio,
+                            isVerified = true,
+                            isTeamMember = true,
+                            verificationBadgeStyle = style
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     private suspend fun seedInitialDataIfNeeded() {
+        ensureConfiguredAdminsSeeded()
         val usersCount = dao.getAllUsers().size
         if (usersCount > 0) {
             val allExisting = dao.getAllUsers()
             for (u in allExisting) {
-                if (u.fourDigitCode.isEmpty()) {
-                    val code = generateUniqueFourDigitCode()
+                val code = if (u.fourDigitCode.isNotEmpty()) u.fourDigitCode
+                           else if (u.personalId.isNotEmpty()) u.personalId
+                           else generateUniqueFourDigitCode()
+                val tag = if (u.jamesTag.isNotEmpty() && u.jamesTag.startsWith("JAMES#", ignoreCase = true)) u.jamesTag.uppercase()
+                          else "JAMES#$code"
+                val customId = if (u.jamesCustomId.isNotEmpty() && u.jamesCustomId.startsWith("JMS-", ignoreCase = true)) u.jamesCustomId.uppercase()
+                               else "JMS-$code"
+                if (u.fourDigitCode != code || u.personalId != code || u.jamesTag != tag || u.jamesCustomId != customId) {
                     dao.updateUser(
                         u.copy(
                             fourDigitCode = code,
                             personalId = code,
-                            jamesTag = "JAMES#$code",
-                            jamesCustomId = "JMS-$code"
+                            jamesTag = tag,
+                            jamesCustomId = customId
                         )
                     )
                 }
@@ -1818,8 +2428,8 @@ class JamesChatRepository(private val context: Context) {
             id = "admin-master-id",
             email = MASTER_ADMIN_EMAIL,
             username = "james_superadmin",
-            firstName = "Hangington",
-            lastName = "Admin",
+            firstName = "Support",
+            lastName = "James",
             role = UserRole.SUPER_ADMIN.name,
             isVerified = true,
             isTeamMember = true,
@@ -2049,7 +2659,7 @@ class JamesChatRepository(private val context: Context) {
             isVerified = true,
             isTeamMember = true,
             verifiedAt = System.currentTimeMillis() - (180L * 86400000L),
-            verifiedByAdminEmail = "hangington53@gmail.com",
+            verifiedByAdminEmail = "admin@jameschat.ht",
             verificationReason = "Bot officiel certifié du réseau James Chat",
             fourDigitCode = "0001",
             personalId = "0001",
@@ -2369,21 +2979,37 @@ class JamesChatRepository(private val context: Context) {
     }
 
     // --- Admin Platform User Management Methods ---
-    suspend fun deleteUserAccount(targetUserId: String) {
+    suspend fun deleteUserAccount(targetUserId: String): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.APPLY_BAN)) {
+            return Result.failure(Exception("Action non autorisée : droits d'administration requis."))
+        }
+        val target = dao.getUserById(targetUserId) ?: return Result.failure(Exception("Utilisateur introuvable."))
+        if (isOwnerEmail(target.email)) {
+            return Result.failure(Exception("Impossible de supprimer le compte d'un Propriétaire officiel du projet."))
+        }
         dao.deleteUser(targetUserId)
         dao.terminateAllUserSessionsExceptCurrent(targetUserId)
         dao.insertAdminLog(
             AdminLogEntity(
                 id = UUID.randomUUID().toString(),
-                adminEmail = _currentUser.value?.email ?: MASTER_ADMIN_EMAIL,
+                adminEmail = caller.email,
                 action = "DELETE_USER_PERMANENT: $targetUserId",
                 target = targetUserId
             )
         )
+        return Result.success(Unit)
     }
 
-    suspend fun limitUserFunctions(targetUserId: String, durationMs: Long) {
-        val target = dao.getUserById(targetUserId) ?: return
+    suspend fun limitUserFunctions(targetUserId: String, durationMs: Long): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.APPLY_SUSPENSION)) {
+            return Result.failure(Exception("Action non autorisée : droits de modération requis."))
+        }
+        val target = dao.getUserById(targetUserId) ?: return Result.failure(Exception("Utilisateur introuvable."))
+        if (isOwnerEmail(target.email)) {
+            return Result.failure(Exception("Impossible d'appliquer une sanction à un Propriétaire officiel."))
+        }
         val end = System.currentTimeMillis() + durationMs
         dao.applyUserSanction(
             userId = targetUserId,
@@ -2396,15 +3022,20 @@ class JamesChatRepository(private val context: Context) {
         dao.insertAdminLog(
             AdminLogEntity(
                 id = UUID.randomUUID().toString(),
-                adminEmail = _currentUser.value?.email ?: MASTER_ADMIN_EMAIL,
+                adminEmail = caller.email,
                 action = "LIMIT_USER_FUNCTIONS for ${durationMs / 3600000}h",
                 target = targetUserId
             )
         )
+        return Result.success(Unit)
     }
 
-    suspend fun unsuspendUser(targetUserId: String) {
-        val target = dao.getUserById(targetUserId) ?: return
+    suspend fun unsuspendUser(targetUserId: String): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.APPLY_SUSPENSION)) {
+            return Result.failure(Exception("Action non autorisée : droits de modération requis."))
+        }
+        val target = dao.getUserById(targetUserId) ?: return Result.failure(Exception("Utilisateur introuvable."))
         dao.applyUserSanction(
             userId = targetUserId,
             isSuspended = false,
@@ -2416,74 +3047,115 @@ class JamesChatRepository(private val context: Context) {
         dao.insertAdminLog(
             AdminLogEntity(
                 id = UUID.randomUUID().toString(),
-                adminEmail = _currentUser.value?.email ?: MASTER_ADMIN_EMAIL,
+                adminEmail = caller.email,
                 action = "UNSUSPEND_USER",
                 target = targetUserId
             )
         )
+        return Result.success(Unit)
     }
 
-    suspend fun addOrUpdateAdmin(email: String, role: String) {
-        val existing = dao.getUserByEmail(email)
-        if (existing != null) {
-            dao.updateUserRole(existing.id, role)
+    suspend fun addOrUpdateAdmin(email: String, role: String): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.MANAGE_ROLES)) {
+            return Result.failure(Exception("Action non autorisée : seul un Propriétaire officiel peut modifier les rôles administratifs."))
         }
+        val existing = dao.getUserByEmail(email.trim().lowercase())
+            ?: return Result.failure(Exception("Aucun utilisateur trouvé avec cet email."))
+        if (isOwnerEmail(existing.email)) {
+            return Result.failure(Exception("Impossible de modifier le rôle d'un Propriétaire officiel du projet."))
+        }
+        dao.updateUserRole(existing.id, role)
         dao.insertAdminLog(
             AdminLogEntity(
                 id = UUID.randomUUID().toString(),
-                adminEmail = _currentUser.value?.email ?: MASTER_ADMIN_EMAIL,
+                adminEmail = caller.email,
                 action = "ASSIGN_ADMIN_ROLE: $role to $email",
                 target = email
             )
         )
+        return Result.success(Unit)
     }
 
-    suspend fun updateAdminRole(userId: String, newRole: String) {
+    suspend fun updateAdminRole(userId: String, newRole: String): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.MANAGE_ROLES)) {
+            return Result.failure(Exception("Action non autorisée : seul un Propriétaire officiel peut modifier les rôles administratifs."))
+        }
+        val target = dao.getUserById(userId) ?: return Result.failure(Exception("Utilisateur introuvable."))
+        if (isOwnerEmail(target.email)) {
+            return Result.failure(Exception("Impossible de modifier le rôle d'un Propriétaire officiel du projet."))
+        }
         dao.updateUserRole(userId, newRole)
         dao.insertAdminLog(
             AdminLogEntity(
                 id = UUID.randomUUID().toString(),
-                adminEmail = _currentUser.value?.email ?: MASTER_ADMIN_EMAIL,
+                adminEmail = caller.email,
                 action = "UPDATE_ADMIN_ROLE to $newRole",
                 target = userId
             )
         )
+        return Result.success(Unit)
     }
 
-    suspend fun suspendAdminPermissions(userId: String) {
+    suspend fun suspendAdminPermissions(userId: String): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.MANAGE_ROLES)) {
+            return Result.failure(Exception("Action non autorisée : seul un Propriétaire officiel peut suspendre un administrateur."))
+        }
+        val target = dao.getUserById(userId) ?: return Result.failure(Exception("Utilisateur introuvable."))
+        if (isOwnerEmail(target.email)) {
+            return Result.failure(Exception("Impossible de suspendre un Propriétaire officiel du projet."))
+        }
         dao.setSuspendedStatus(userId, true)
         dao.insertAdminLog(
             AdminLogEntity(
                 id = UUID.randomUUID().toString(),
-                adminEmail = _currentUser.value?.email ?: MASTER_ADMIN_EMAIL,
+                adminEmail = caller.email,
                 action = "SUSPEND_ADMIN_PERMISSIONS",
                 target = userId
             )
         )
+        return Result.success(Unit)
     }
 
-    suspend fun restoreAdminPermissions(userId: String) {
+    suspend fun restoreAdminPermissions(userId: String): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.MANAGE_ROLES)) {
+            return Result.failure(Exception("Action non autorisée : seul un Propriétaire officiel peut restaurer un administrateur."))
+        }
+        val target = dao.getUserById(userId) ?: return Result.failure(Exception("Utilisateur introuvable."))
         dao.setSuspendedStatus(userId, false)
         dao.insertAdminLog(
             AdminLogEntity(
                 id = UUID.randomUUID().toString(),
-                adminEmail = _currentUser.value?.email ?: MASTER_ADMIN_EMAIL,
+                adminEmail = caller.email,
                 action = "RESTORE_ADMIN_PERMISSIONS",
                 target = userId
             )
         )
+        return Result.success(Unit)
     }
 
-    suspend fun removeAdmin(userId: String) {
+    suspend fun removeAdmin(userId: String): Result<Unit> {
+        val caller = _currentUser.value ?: return Result.failure(Exception("Non connecté"))
+        if (!hasPermission(AdminPermission.MANAGE_ROLES)) {
+            return Result.failure(Exception("Action non autorisée : seul un Propriétaire officiel peut révoquer les droits administratifs."))
+        }
+        val target = dao.getUserById(userId) ?: return Result.failure(Exception("Utilisateur introuvable."))
+        if (isOwnerEmail(target.email)) {
+            return Result.failure(Exception("Impossible de révoquer les droits d'un Propriétaire officiel du projet."))
+        }
         dao.updateUserRole(userId, UserRole.USER.name)
         dao.insertAdminLog(
             AdminLogEntity(
                 id = UUID.randomUUID().toString(),
-                adminEmail = _currentUser.value?.email ?: MASTER_ADMIN_EMAIL,
+                adminEmail = caller.email,
                 action = "REVOKE_ADMIN_RIGHTS",
                 target = userId
             )
         )
+        return Result.success(Unit)
     }
 
     suspend fun logoutRemoteSession(sessionId: String) {

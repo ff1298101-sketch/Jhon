@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,7 +92,8 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(
     repository: JamesChatRepository,
     currentLang: AppLanguage,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onLogout: () -> Unit = onBack
 ) {
     val currentUser by repository.currentUser.collectAsState()
     val scope = rememberCoroutineScope()
@@ -107,9 +110,9 @@ fun ProfileScreen(
     var profileVideoUrl by remember(currentUser) { mutableStateOf(currentUser?.profileVideoUrl ?: "") }
     var showVideoPreview by remember { mutableStateOf(false) }
     var saveSuccessMessage by remember { mutableStateOf(false) }
-    var showLinkGoogleDialog by remember { mutableStateOf(false) }
     var showQrDialog by remember { mutableStateOf(false) }
     var showRequestVBadgeDialog by remember { mutableStateOf(false) }
+    var showChangeBadgeStyleDialog by remember { mutableStateOf(false) }
     var requestFeedbackMessage by remember { mutableStateOf<String?>(null) }
     val latestVerificationReq by repository.dao.getLatestVerificationRequestFlow(currentUser?.id ?: "").collectAsState(initial = null)
     val clipboard = LocalClipboardManager.current
@@ -588,38 +591,51 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "🌐", fontSize = 18.sp)
+                        Text(text = "🛡️", fontSize = 18.sp)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Compte Google", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(text = "Pwòp Kont James Pa W", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    val isGoogleLinked = currentUser?.email?.endsWith("@gmail.com") == true
-                    if (isGoogleLinked) {
-                        Text(
-                            text = "Compte Google associé : ${currentUser?.email}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "✓ Vos contacts, conversations, paramètres et profil sont conservés.",
-                            fontSize = 11.sp,
-                            color = JamesOnlineGreen
-                        )
-                    } else {
-                        Text(
-                            text = "Associez votre compte Google à votre profil James Chat tout en conservant votre nom d'utilisateur, vos conversations et vos contacts.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        OutlinedButton(
-                            onClick = { showLinkGoogleDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text(text = "Associer mon compte Google", fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Kont sa a se pou ou pèsonèlman. Tout mesaj, apèl, kontak ak done w yo sekirize.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "ID James :", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = currentUser?.jamesTag?.ifEmpty { "JAMES#${currentUser?.fourDigitCode}" } ?: "—", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "Kòd 4 chif :", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = currentUser?.fourDigitCode?.ifEmpty { "—" } ?: "—", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "Kontak :", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = currentUser?.email ?: "—", fontSize = 12.sp)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "Estati :", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = "✓ Pwoteje & Endepandan", color = JamesOnlineGreen, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            }
                         }
                     }
                 }
@@ -682,6 +698,14 @@ fun ProfileScreen(
                                 fontSize = 11.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { showChangeBadgeStyleDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Modifier le modèle de badge (5 styles)", fontSize = 12.sp)
                         }
                     } else {
                         val req = latestVerificationReq
@@ -750,7 +774,7 @@ fun ProfileScreen(
                             }
                         } else {
                             Text(
-                                text = "Obtenez le badge bleu officiel (Style Sceau ou Royal) pour confirmer votre identité en tant que créateur, personnalité ou organisation.",
+                                text = "Obtenez le badge bleu certifié officiel (Style 2: Sceau, Style 3: Royal ou Style 4: Diamant) pour confirmer votre identité en tant que créateur, personnalité ou organisation.",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -801,6 +825,25 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(text = "Modifications enregistrées !", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        repository.logout()
+                        onLogout()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("profile_logout_btn"),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(text = "🚪 Dekonekte nan kont sa a (Se déconnecter)", fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 
@@ -809,69 +852,6 @@ fun ProfileScreen(
             title = "Vidéo de profil",
             videoUrl = profileVideoUrl,
             onDismiss = { showVideoPreview = false }
-        )
-    }
-
-    if (showLinkGoogleDialog) {
-        var linkEmail by remember { mutableStateOf("") }
-        var linkError by remember { mutableStateOf<String?>(null) }
-        AlertDialog(
-            onDismissRequest = { showLinkGoogleDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "🌐", fontSize = 20.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Associer un compte Google", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Entrez votre adresse email Google pour associer votre compte James Chat. Vos données, contacts, profil et conversations seront conservés :",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    OutlinedTextField(
-                        value = linkEmail,
-                        onValueChange = { linkEmail = it; linkError = null },
-                        label = { Text("Adresse email Google (@gmail.com)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (linkError != null) {
-                        Text(text = linkError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val trimmed = linkEmail.trim()
-                        if (trimmed.isNotEmpty()) {
-                            scope.launch {
-                                val res = repository.linkGoogleToCurrentAccount(trimmed)
-                                res.fold(
-                                    onSuccess = {
-                                        showLinkGoogleDialog = false
-                                        saveSuccessMessage = true
-                                    },
-                                    onFailure = {
-                                        linkError = it.message ?: "Erreur d'association du compte Google"
-                                    }
-                                )
-                            }
-                        }
-                    },
-                    enabled = linkEmail.contains("@")
-                ) {
-                    Text("Associer")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLinkGoogleDialog = false }) {
-                    Text("Annuler")
-                }
-            }
         )
     }
 
@@ -1032,17 +1012,17 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Style préféré (Sceau vs Royal mis en avant)
-                    Text(text = "Style de badge souhaité :", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Row(
+                    // Style préféré (Les 5 modèles officiels V Badge)
+                    Text(text = "Style de badge souhaité (5 modèles officiels) :", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    androidx.compose.foundation.lazy.LazyRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf(com.example.data.model.VBadgeStyle.SEAL, com.example.data.model.VBadgeStyle.ROYAL).forEach { styleOpt ->
+                        items(com.example.data.model.VBadgeStyle.entries.toTypedArray()) { styleOpt ->
                             val isSel = reqPreferredStyle == styleOpt
                             Card(
                                 modifier = Modifier
-                                    .weight(1f)
+                                    .width(100.dp)
                                     .clickable { reqPreferredStyle = styleOpt },
                                 shape = RoundedCornerShape(10.dp),
                                 colors = CardDefaults.cardColors(
@@ -1056,7 +1036,7 @@ fun ProfileScreen(
                                 ) {
                                     JamesVBadge(size = 20.dp, style = styleOpt, showTooltipOnClick = false)
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(text = styleOpt.title, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text(text = styleOpt.title, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                                 }
                             }
                         }
@@ -1122,6 +1102,79 @@ fun ProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showRequestVBadgeDialog = false }, enabled = !isSubmitting) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    val verifiedUser = currentUser
+    if (showChangeBadgeStyleDialog && verifiedUser != null && verifiedUser.isVerified) {
+        var selectedStyle by remember { mutableStateOf(com.example.data.model.VBadgeStyle.fromCode(verifiedUser.verificationBadgeStyle)) }
+        var isUpdating by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { if (!isUpdating) showChangeBadgeStyleDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    JamesVBadge(size = 22.dp, style = selectedStyle, showTooltipOnClick = false)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Choisir votre modèle V Badge", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Sélectionnez parmi les 5 modèles officiels de vérification. Votre statut officiel reste actif sans interruption :",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    com.example.data.model.VBadgeStyle.entries.forEach { styleOpt ->
+                        val isSel = selectedStyle == styleOpt
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedStyle = styleOpt },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSel) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                            ),
+                            border = if (isSel) androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                JamesVBadge(size = 20.dp, style = styleOpt, showTooltipOnClick = false)
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = styleOpt.title, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text(text = styleOpt.description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        isUpdating = true
+                        scope.launch {
+                            repository.updateBadgeStyle(verifiedUser.id, selectedStyle)
+                            isUpdating = false
+                            showChangeBadgeStyleDialog = false
+                        }
+                    },
+                    enabled = !isUpdating
+                ) {
+                    Text("Appliquer ce modèle")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChangeBadgeStyleDialog = false }, enabled = !isUpdating) {
                     Text("Annuler")
                 }
             }

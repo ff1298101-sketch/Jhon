@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.FormatSize
@@ -86,7 +87,8 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     onOpenWeb: () -> Unit = {},
     onOpenAcademy: () -> Unit = {},
-    onOpenGames: () -> Unit = {}
+    onOpenGames: () -> Unit = {},
+    onOpenAdmin: () -> Unit = {}
 ) {
     val themeMode by repository.themeMode.collectAsState()
     val fontSizeScale by repository.fontSizeScale.collectAsState()
@@ -372,7 +374,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text("Aperçu de la sonnerie", fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                                Text("Écouter la mélodie et tester la vibration", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Écouter la mélodie et la vibration", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
 
@@ -392,7 +394,7 @@ fun SettingsScreen(
                             },
                             modifier = Modifier.testTag("settings_preview_ringtone_btn")
                         ) {
-                            Text(if (isPreviewingRingtone) "Arrêter" else "Tester", fontSize = 12.sp)
+                            Text(if (isPreviewingRingtone) "Arrêter" else "Écouter", fontSize = 12.sp)
                         }
                     }
 
@@ -554,6 +556,16 @@ fun SettingsScreen(
                         subtitle = "Messages envoyés, stockage",
                         onClick = { /* Open personal stats */ }
                     )
+
+                    if (repository.isCurrentUserAdmin()) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        SettingsRow(
+                            icon = Icons.Default.AdminPanelSettings,
+                            title = "Panneau d'Administration",
+                            subtitle = "Accès réservé aux administrateurs officiels",
+                            onClick = onOpenAdmin
+                        )
+                    }
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 

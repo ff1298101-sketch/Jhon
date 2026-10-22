@@ -143,7 +143,7 @@ fun JamesVBadge(
                     )
                 }
                 VBadgeStyle.DIAMOND -> {
-                    // Forme diamant losange
+                    // Forme diamant losange élégante avec bordure interne
                     val diamondPath = Path().apply {
                         moveTo(cx, h * 0.04f)
                         lineTo(w * 0.94f, cy)
@@ -152,6 +152,18 @@ fun JamesVBadge(
                         close()
                     }
                     drawPath(path = diamondPath, color = badgeColor, style = Fill)
+                    val innerDiamond = Path().apply {
+                        moveTo(cx, h * 0.14f)
+                        lineTo(w * 0.84f, cy)
+                        lineTo(cx, h * 0.86f)
+                        lineTo(w * 0.16f, cy)
+                        close()
+                    }
+                    drawPath(
+                        path = innerDiamond,
+                        color = Color.White.copy(alpha = 0.35f),
+                        style = Stroke(width = w * 0.04f)
+                    )
                 }
                 VBadgeStyle.HEXAGON -> {
                     // Hexagone moderne tech

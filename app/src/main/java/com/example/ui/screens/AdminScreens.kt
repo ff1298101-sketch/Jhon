@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
@@ -43,13 +45,16 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -83,7 +88,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -118,6 +125,7 @@ fun AdminDashboardScreen(
     currentLang: AppLanguage,
     onBack: () -> Unit
 ) {
+    val currentUser by repository.currentUser.collectAsState()
     val isAdmin = repository.isCurrentUserAdmin()
 
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -137,14 +145,29 @@ fun AdminDashboardScreen(
     val allUsers by repository.dao.getAllUsersFlow().collectAsState(initial = emptyList())
     val adminLogs by repository.dao.getAllAdminLogsFlow().collectAsState(initial = emptyList())
 
-    LaunchedEffect(Unit) {
-        analytics = repository.getAdminAnalytics()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(isAdmin) {
+        if (isAdmin) {
+            analytics = repository.getAdminAnalytics()
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(JamesI18n.t("admin_panel", currentLang), fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text(JamesI18n.t("admin_panel", currentLang), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        if (isAdmin && currentUser != null) {
+                            Text(
+                                text = "Admin : ${currentUser?.firstName} ${currentUser?.lastName} • ${currentUser?.role}",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("admin_back_btn")) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
@@ -162,27 +185,67 @@ fun AdminDashboardScreen(
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = JamesErrorRed
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Accès refusé",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Seuls les administrateurs autorisés et le propriétaire peuvent accéder aux outils James Transfer et James Scheduler.",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.errorContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(36.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Accès Restreint",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "Ce panneau d'administration et les adresses email des administrateurs sont strictement réservés aux comptes administrateurs officiels connectés. Seuls les administrateurs autorisés ont accès à cette section.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Button(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("admin_restricted_back_btn"),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "Retour aux discussions",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                 }
             }
         } else {
@@ -205,7 +268,7 @@ fun AdminDashboardScreen(
                 }
 
                 when (selectedTab) {
-                    0 -> AdminOverviewTab(analytics = analytics)
+                    0 -> AdminOverviewTab(analytics = analytics, repository = repository)
                     1 -> AdminKnowledgeBaseTab(repository = repository)
                     2 -> AdminUsersFullManagementTab(users = allUsers, repository = repository)
                     3 -> AdminAdminsManagementTab(users = allUsers, repository = repository)
@@ -221,7 +284,12 @@ fun AdminDashboardScreen(
 }
 
 @Composable
-fun AdminOverviewTab(analytics: AdminAnalytics?) {
+fun AdminOverviewTab(analytics: AdminAnalytics?, repository: JamesChatRepository? = null) {
+    val clipboard = LocalClipboardManager.current
+    var copiedEmail by remember { mutableStateOf<String?>(null) }
+    val currentAdmin = repository?.currentUser?.value
+    val allAdminEmails = JamesChatRepository.CONFIGURED_7_ADMINS
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -279,6 +347,45 @@ fun AdminOverviewTab(analytics: AdminAnalytics?) {
                     Text(text = "• Comptes suspendus/bannis : ${analytics?.suspendedAccounts ?: 0}", fontSize = 13.sp)
                     Text(text = "• Chiffrement de bout en bout : ACTIF (100%)", fontSize = 13.sp, color = JamesOnlineGreen)
                     Text(text = "• RLS Supabase & Isolation RBAC : ACTIVÉ", fontSize = 13.sp, color = JamesBluePrimary)
+                }
+            }
+        }
+
+        // Session Administrateur Sécurisée
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Session Administrateur Sécurisée",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Connecté en tant que : ${currentAdmin?.email ?: "Administrateur officiel"} • Rôle : ${if (repository?.isCurrentUserOwner() == true) "PROPRIÉTAIRE 👑" else currentAdmin?.role ?: "ADMIN"}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "La gestion des administrateurs et des accès est accessible dans l'onglet « Administrateurs ».",
+                        fontSize = 11.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -396,8 +503,47 @@ fun AdminUsersFullManagementTab(
             }
         }
 
+        // Tès ID Reyèl rapid pou Administrasyon
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            item {
+                Text(
+                    text = "🔍 Tès ID Reyèl :",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
+            listOf("2001", "2002", "2003", "0001", "1002", "JAMES#2001", "JMS-2002").forEach { idSample ->
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (searchQuery == idSample) JamesOnlineGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        border = BorderStroke(0.5.dp, if (searchQuery == idSample) JamesOnlineGreen else MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier.clickable {
+                            searchQuery = idSample
+                            selectedFilter = "Tous"
+                        }
+                    ) {
+                        Text(
+                            text = idSample,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (searchQuery == idSample) JamesOnlineGreen else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         Text(
-            text = "${filtered.size} utilisateur(s) trouvé(s)",
+            text = "${filtered.size} utilisateur(s) trouvé(s) • Base de données locale & synchronisée",
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
@@ -815,74 +961,301 @@ fun AdminAdminsManagementTab(
     repository: JamesChatRepository
 ) {
     val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboardManager.current
+    var copiedNotice by remember { mutableStateOf<String?>(null) }
+    var showFullEmails by remember { mutableStateOf(false) }
     var showAddAdminDialog by remember { mutableStateOf(false) }
     var selectedAdminForEdit by remember { mutableStateOf<UserEntity?>(null) }
     var newAdminEmailInput by remember { mutableStateOf("") }
     var newAdminRoleInput by remember { mutableStateOf(UserRole.ADMIN.name) }
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
 
-    // Owners and Admins list
-    val owners = listOf("hangington53@gmail.com", "nopyoo21@gmail.com")
+    fun maskAdminEmail(email: String): String {
+        val at = email.indexOf('@')
+        if (at <= 2) return email
+        val name = email.substring(0, at)
+        val domain = email.substring(at)
+        val visible = name.take(3)
+        return "$visible****$domain"
+    }
+
+    val configuredAdmins = JamesChatRepository.CONFIGURED_7_ADMINS
     val currentAdminUser = repository.currentUser.value
 
-    // Admins from database
-    val adminUsers = users.filter { it.role == UserRole.ADMIN.name || it.role == UserRole.OWNER.name || it.role == UserRole.SUPER_ADMIN.name || it.role == UserRole.MODERATOR.name }
+    val configuredEmailSet = configuredAdmins.map { it.email.lowercase() }.toSet()
+    val databaseAdmins = users.filter {
+        (it.role == UserRole.ADMIN.name || it.role == UserRole.OWNER.name || it.role == UserRole.SUPER_ADMIN.name || it.role == UserRole.MODERATOR.name) &&
+        !configuredEmailSet.contains(it.email.lowercase())
+    }
 
-    Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(text = "Centre Administrateur James Chat", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(text = "Rôles, Permissions & Contrôle d'Accès RBAC", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Button(onClick = { showAddAdminDialog = true }) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Ajouter", fontSize = 12.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Card displaying main owners
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = "👑 PROPRIÉTAIRES PRINCIPAUX DU SYSTÈME", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(4.dp))
-                owners.forEach { ownerEmail ->
-                    Row(
-                        modifier = Modifier.padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "• $ownerEmail", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        JamesVBadge(size = 12.dp)
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Centre d'Administration James Chat", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = "Gestion des comptes et des privilèges administrateurs", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (repository.isCurrentUserOwner()) {
+                    Button(onClick = { showAddAdminDialog = true }) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Ajouter", fontSize = 12.sp)
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Les propriétaires bénéficient d'un accès RLS complet et de l'autorité suprême de gestion.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "LISTE DES ADMINISTRATEURS ACTIFS (${adminUsers.size})", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        Spacer(modifier = Modifier.height(6.dp))
+        if (copiedNotice != null) {
+            item {
+                Surface(
+                    color = JamesOnlineGreen.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = copiedNotice!!,
+                        color = JamesOnlineGreen,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+            }
+        }
 
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(adminUsers) { admin ->
-                val isMainOwner = owners.contains(admin.email)
+        // Section 1: Compte actuellement connecté
+        if (currentAdminUser != null) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AvatarWithStatus(
+                            name = currentAdminUser.username.ifEmpty { currentAdminUser.email },
+                            avatarUrl = currentAdminUser.avatarUrl,
+                            size = 46.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "${currentAdminUser.firstName} ${currentAdminUser.lastName}".trim().ifEmpty { currentAdminUser.username },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                JamesVBadge(size = 14.dp)
+                            }
+                            Text(
+                                text = currentAdminUser.email,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Votre compte • Rôle : ${currentAdminUser.role} • Statut : Connecté & Actif 🟢",
+                                fontSize = 11.sp,
+                                color = JamesOnlineGreen,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                clipboard.setText(AnnotatedString(currentAdminUser.email))
+                                copiedNotice = "Votre adresse email a été copiée : ${currentAdminUser.email}"
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copier",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
+        // Section 2: Adresses Email Officielles des Administrateurs
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "👑 PROPRIÉTAIRES ET ADMINISTRATEURS OFFICIELS",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "3 Propriétaires officiels et modérateurs autorisés",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = { showFullEmails = !showFullEmails }) {
+                                Icon(
+                                    imageVector = if (showFullEmails) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (showFullEmails) "Masquer" else "Afficher", fontSize = 11.sp)
+                            }
+                            TextButton(
+                                onClick = {
+                                    val allEmailsJoined = configuredAdmins.joinToString(", ") { it.email }
+                                    clipboard.setText(AnnotatedString(allEmailsJoined))
+                                    copiedNotice = "Les adresses email des administrateurs ont été copiées dans le presse-papiers !"
+                                }
+                            ) {
+                                Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Copier tout", fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    configuredAdmins.forEach { admin ->
+                        val isCurrentUser = admin.email.equals(currentAdminUser?.email, true)
+                        val displayEmail = if (showFullEmails || isCurrentUser) admin.email else maskAdminEmail(admin.email)
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 1.dp
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = displayEmail,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        JamesVBadge(size = 12.dp)
+                                        if (isCurrentUser) {
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(text = "(Vous)", fontSize = 11.sp, color = JamesOnlineGreen, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "${admin.firstName} ${admin.lastName} • ${admin.title}",
+                                        fontSize = 11.5.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = admin.bio,
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
+                                        color = when (admin.role) {
+                                            UserRole.OWNER -> Color(0xFFE0E7FF)
+                                            UserRole.SUPER_ADMIN -> Color(0xFFFEE2E2)
+                                            UserRole.ADMIN -> Color(0xFFDCFCE7)
+                                            UserRole.MODERATOR -> Color(0xFFFEF3C7)
+                                            UserRole.SUPPORT -> Color(0xFFF3E8FF)
+                                            else -> MaterialTheme.colorScheme.primaryContainer
+                                        },
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = admin.role.name,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = when (admin.role) {
+                                                UserRole.OWNER -> Color(0xFF4338CA)
+                                                UserRole.SUPER_ADMIN -> Color(0xFFB91C1C)
+                                                UserRole.ADMIN -> Color(0xFF15803D)
+                                                UserRole.MODERATOR -> Color(0xFFB45309)
+                                                UserRole.SUPPORT -> Color(0xFF7E22CE)
+                                                else -> MaterialTheme.colorScheme.primary
+                                            },
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    IconButton(
+                                        onClick = {
+                                            clipboard.setText(AnnotatedString(admin.email))
+                                            copiedNotice = "Adresse email copiée : ${admin.email}"
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Copier l'adresse email",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 3: Autres administrateurs dans la base de données
+        if (databaseAdmins.isNotEmpty()) {
+            item {
+                Text(
+                    text = "👥 AUTRES ADMINISTRATEURS DANS LA BASE (${databaseAdmins.size})",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            items(databaseAdmins) { admin ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 5.dp),
+                        .padding(vertical = 4.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (admin.isSuspended) JamesWarningAmber.copy(alpha = 0.1f)
@@ -901,29 +1274,45 @@ fun AdminAdminsManagementTab(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(text = "${admin.firstName} ${admin.lastName}".trim().ifEmpty { admin.username }, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(
+                                    text = "${admin.firstName} ${admin.lastName}".trim().ifEmpty { admin.username },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 JamesVBadge(size = 14.dp)
                             }
-                            Text(text = admin.email, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = admin.email,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Text(
                                 text = "Rôle: ${admin.role} • Statut: ${if (admin.isSuspended) "Permissions suspendues ⏸️" else "Actif 🟢"}",
                                 fontSize = 11.sp,
                                 color = if (admin.isSuspended) JamesWarningAmber else MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
                             )
-                            Text(
-                                text = "Dernière activité: ${dateFormat.format(Date(admin.lastSeen))}",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.outline
+                        }
+
+                        IconButton(
+                            onClick = {
+                                clipboard.setText(AnnotatedString(admin.email))
+                                copiedNotice = "Imèl kopye : ${admin.email}"
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Kopye",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
 
-                        // Modify options button
-                        if (!isMainOwner) {
-                            IconButton(onClick = { selectedAdminForEdit = admin }) {
-                                Icon(imageVector = Icons.Default.Edit, contentDescription = "Modifier", tint = MaterialTheme.colorScheme.primary)
-                            }
+                        IconButton(onClick = { selectedAdminForEdit = admin }) {
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Modifier", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -1121,7 +1510,7 @@ fun AdminBadgesTab(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Badges principaux sélectionnés : Style 2 (V Sceau) & Style 3 (V Royal). Attribution automatique aux administrateurs autorisés et gestion certifiée des demandes créateurs.",
+                    text = "Badges certifiés officiels (Options 2, 3, 4) : Style 2 (V Sceau), Style 3 (V Royal) & Style 4 (V Diamant) 💎. Attribution instantanée aux administrateurs autorisés et certification officielle des créateurs.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1550,8 +1939,8 @@ fun AdminBadgesTab(
                     Text(text = "Motif soumis : ${req.reason}", fontSize = 12.5.sp)
 
                     if (isApprovingRequest) {
-                        Text(text = "Choisir le style de badge à attribuer :", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                        listOf(VBadgeStyle.SEAL, VBadgeStyle.ROYAL, VBadgeStyle.CLASSIC).forEach { styleOpt ->
+                        Text(text = "Choisir le style de badge à attribuer (5 modèles) :", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                        VBadgeStyle.entries.forEach { styleOpt ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()

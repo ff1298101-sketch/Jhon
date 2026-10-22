@@ -90,7 +90,9 @@ enum class MessageType {
     VIDEO,
     AUDIO,
     DOCUMENT,
-    STICKER
+    STICKER,
+    LOCATION,
+    POLL
 }
 
 enum class MessageDeliveryStatus {
@@ -488,7 +490,7 @@ enum class VBadgeStyle(
     CLASSIC("CLASSIC", "V Classique", "Cercle bleu avec coche blanche", false),
     SEAL("SEAL", "V Sceau", "Badge en forme de sceau officiel avec coche", true),
     ROYAL("ROYAL", "V Royal", "Bouclier bleu royal prestigieux avec coche", true),
-    DIAMOND("DIAMOND", "V Diamant", "Forme diamant élégante avec coche", false),
+    DIAMOND("DIAMOND", "V Diamant", "Forme diamant élégante avec coche", true),
     HEXAGON("HEXAGON", "V Hexagone", "Hexagone moderne technologique avec coche", false);
 
     companion object {

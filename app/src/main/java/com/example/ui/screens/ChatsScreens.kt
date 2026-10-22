@@ -39,8 +39,11 @@ import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Pin
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Poll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.School
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
@@ -57,6 +61,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -125,6 +130,7 @@ fun ConversationsListScreen(
 ) {
     val conversations by repository.dao.getAllConversationsFlow().collectAsState(initial = emptyList())
     val typingUsers by repository.typingUsers.collectAsState()
+    var showGlobalStarredDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -160,6 +166,29 @@ fun ConversationsListScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            modifier = Modifier.clickable { showGlobalStarredDialog = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Messages favoris ⭐", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                        }
+                    }
+                }
                 items(conversations) { conv ->
                     ConversationItemRow(
                         conversation = conv,
@@ -175,6 +204,15 @@ fun ConversationsListScreen(
                 }
             }
         }
+    }
+
+    if (showGlobalStarredDialog) {
+        StarredMessagesViewerDialog(
+            conversationId = "",
+            repository = repository,
+            currentLang = currentLang,
+            onDismiss = { showGlobalStarredDialog = false }
+        )
     }
 }
 
@@ -321,6 +359,12 @@ fun ChatDetailScreen(
     var showBotProfileSheet by remember { mutableStateOf(false) }
     var isSearchInChatActive by remember { mutableStateOf(false) }
     var chatSearchKeyword by remember { mutableStateOf("") }
+    var showWallpaperDialog by remember { mutableStateOf(false) }
+    var showStarredMessagesDialog by remember { mutableStateOf(false) }
+    var showCreatePollDialog by remember { mutableStateOf(false) }
+    var showShareLocationDialog by remember { mutableStateOf(false) }
+    var showAttachmentOptions by remember { mutableStateOf(false) }
+    var isMutedChat by remember { mutableStateOf(false) }
 
     val currentGroup by repository.dao.getGroupByIdFlow(conversationId).collectAsState(initial = null)
 
@@ -424,6 +468,15 @@ fun ChatDetailScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp
                                 )
+                                if (isMutedChat) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.NotificationsOff,
+                                        contentDescription = "Silansye",
+                                        tint = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
                                 val isBot = conversationId == "conv_james_bot" ||
                                         conversation?.title?.contains("James Bot", ignoreCase = true) == true
                                 if (isBot) {
@@ -507,9 +560,46 @@ fun ChatDetailScreen(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Fond d'écran du chat") },
+                                text = { Text("Fond d'écran du chat 🎨") },
                                 onClick = {
                                     showOptionsMenu = false
+                                    showWallpaperDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Messages favoris ⭐") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    showStarredMessagesDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (isMutedChat) "Réactiver les notifications 🔔" else "Mettre en sourdine 🔕") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    isMutedChat = !isMutedChat
+                                    val msg = if (isMutedChat) "Notifications silansye pou diskisyon sa a 🔕" else "Notifications re-aktive 🔔"
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Exporter la discussion 📤") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    val transcript = buildString {
+                                        appendLine("=== EXPÒTASYON DISKISYON JAMES CHAT ===")
+                                        appendLine("Diskisyon : ${conversation?.title ?: "Chat"}")
+                                        appendLine("Dat : ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())}")
+                                        appendLine("Total mesaj : ${messages.size}")
+                                        appendLine("----------------------------------------")
+                                        messages.forEach { m ->
+                                            val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(m.timestamp))
+                                            appendLine("[$time] ${m.senderUsername}: ${m.text}")
+                                        }
+                                        appendLine("========================================")
+                                    }
+                                    clipboardManager.setText(AnnotatedString(transcript))
+                                    Toast.makeText(context, "Tout diskisyon an kopye nan clipboard la !", Toast.LENGTH_SHORT).show()
                                 }
                             )
                             DropdownMenuItem(
@@ -529,11 +619,22 @@ fun ChatDetailScreen(
         },
         modifier = Modifier.imePadding()
     ) { padding ->
+        val chatBgColor = when (conversation?.wallpaperKey) {
+            "navy" -> Color(0xFF0F172A)
+            "emerald" -> Color(0xFF064E3B)
+            "sunset" -> Color(0xFF431407)
+            "purple" -> Color(0xFF3B0764)
+            "dark" -> Color(0xFF18181B)
+            "light" -> Color(0xFFF8FAFC)
+            "doodle" -> Color(0xFF1E293B)
+            else -> MaterialTheme.colorScheme.background
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(MaterialTheme.colorScheme.background)
+                .background(chatBgColor)
         ) {
             if (conversation?.ephemeralDurationMs ?: 0L > 0L) {
                 Surface(
@@ -919,45 +1020,127 @@ fun ChatDetailScreen(
                             }
                         }
                     } else {
-                        // Saisie standard
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = { showStickerSheet = true },
-                                modifier = Modifier.testTag("chat_open_stickers_btn")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.EmojiEmotions,
-                                    contentDescription = "Stickers & Emojis",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+                        Column {
+                            AnimatedVisibility(visible = showAttachmentOptions) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    LazyRow(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        item {
+                                            FilterChip(
+                                                selected = false,
+                                                onClick = {
+                                                    showAttachmentOptions = false
+                                                    showCreatePollDialog = true
+                                                },
+                                                leadingIcon = {
+                                                    Icon(Icons.Default.Poll, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                                },
+                                                label = { Text("Sondage 📊", fontSize = 11.5.sp) }
+                                            )
+                                        }
+                                        item {
+                                            FilterChip(
+                                                selected = false,
+                                                onClick = {
+                                                    showAttachmentOptions = false
+                                                    showShareLocationDialog = true
+                                                },
+                                                leadingIcon = {
+                                                    Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                                                },
+                                                label = { Text("Position 📍", fontSize = 11.5.sp) }
+                                            )
+                                        }
+                                        item {
+                                            FilterChip(
+                                                selected = false,
+                                                onClick = {
+                                                    showAttachmentOptions = false
+                                                    scope.launch {
+                                                        repository.sendMediaMessage(
+                                                            conversationId = conversationId,
+                                                            type = MessageType.DOCUMENT,
+                                                            mediaUrl = "doc://jameschat.ht/Devoir_JamesAcademy.pdf",
+                                                            fileName = "Devoir_JamesAcademy.pdf",
+                                                            fileSize = "2.4 MB"
+                                                        )
+                                                    }
+                                                },
+                                                leadingIcon = {
+                                                    Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
+                                                },
+                                                label = { Text("Document 📄", fontSize = 11.5.sp) }
+                                            )
+                                        }
+                                        item {
+                                            FilterChip(
+                                                selected = false,
+                                                onClick = {
+                                                    showAttachmentOptions = false
+                                                    photoPickerLauncher.launch(
+                                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                                    )
+                                                },
+                                                leadingIcon = {
+                                                    Icon(Icons.Default.Photo, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                },
+                                                label = { Text("Photo 📷", fontSize = 11.5.sp) }
+                                            )
+                                        }
+                                        item {
+                                            FilterChip(
+                                                selected = false,
+                                                onClick = {
+                                                    showAttachmentOptions = false
+                                                    videoPickerLauncher.launch(
+                                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                                                    )
+                                                },
+                                                leadingIcon = {
+                                                    Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                },
+                                                label = { Text("Vidéo 🎬", fontSize = 11.5.sp) }
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
-                            IconButton(
-                                onClick = {
-                                    photoPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
-                                },
-                                modifier = Modifier.testTag("chat_attach_photo_btn")
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(imageVector = Icons.Default.Photo, contentDescription = "Photo")
-                            }
+                                IconButton(
+                                    onClick = { showAttachmentOptions = !showAttachmentOptions },
+                                    modifier = Modifier.testTag("chat_attachment_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AttachFile,
+                                        contentDescription = "Pièces jointes",
+                                        tint = if (showAttachmentOptions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
 
-                            IconButton(
-                                onClick = {
-                                    videoPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                                IconButton(
+                                    onClick = { showStickerSheet = true },
+                                    modifier = Modifier.testTag("chat_open_stickers_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.EmojiEmotions,
+                                        contentDescription = "Stickers & Emojis",
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
-                                },
-                                modifier = Modifier.testTag("chat_attach_video_btn")
-                            ) {
-                                Icon(imageVector = Icons.Default.Videocam, contentDescription = "Vidéo")
-                            }
+                                }
 
                             OutlinedTextField(
                                 value = inputText,
@@ -1201,4 +1384,417 @@ fun ChatDetailScreen(
             )
         }
     }
+
+    if (showWallpaperDialog) {
+        ChatWallpaperChooserDialog(
+            currentKey = conversation?.wallpaperKey ?: "default",
+            onSelectWallpaper = { newKey ->
+                scope.launch {
+                    repository.setConversationWallpaper(conversationId, newKey)
+                    showWallpaperDialog = false
+                    Toast.makeText(context, "Nouvo fond d'écran anrejistre !", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { showWallpaperDialog = false }
+        )
+    }
+
+    if (showStarredMessagesDialog) {
+        StarredMessagesViewerDialog(
+            conversationId = conversationId,
+            repository = repository,
+            currentLang = currentLang,
+            onDismiss = { showStarredMessagesDialog = false }
+        )
+    }
+
+    if (showCreatePollDialog) {
+        CreatePollDialog(
+            onDismiss = { showCreatePollDialog = false },
+            onSubmitPoll = { question, options ->
+                val payload = "POLL:$question|${options.joinToString("|")}"
+                scope.launch {
+                    repository.sendMediaMessage(
+                        conversationId = conversationId,
+                        type = MessageType.POLL,
+                        mediaUrl = "",
+                        caption = payload
+                    )
+                    Toast.makeText(context, "Sondage publié !", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+
+    if (showShareLocationDialog) {
+        ShareLocationDialog(
+            onDismiss = { showShareLocationDialog = false },
+            onSelectLocation = { loc ->
+                scope.launch {
+                    repository.sendMediaMessage(
+                        conversationId = conversationId,
+                        type = MessageType.LOCATION,
+                        mediaUrl = "",
+                        caption = loc
+                    )
+                    Toast.makeText(context, "Pozisyon pataje !", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+}
+}
+
+@Composable
+fun ChatWallpaperChooserDialog(
+    currentKey: String,
+    onSelectWallpaper: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val wallpapers = listOf(
+        Triple("default", "Défaut James", Color(0xFF1E293B)),
+        Triple("navy", "Bleu Nuit", Color(0xFF0F172A)),
+        Triple("emerald", "Émeraude Royale", Color(0xFF064E3B)),
+        Triple("sunset", "Coucher de Soleil", Color(0xFF431407)),
+        Triple("purple", "Violet Mystique", Color(0xFF3B0764)),
+        Triple("dark", "Mode Sombre", Color(0xFF18181B)),
+        Triple("light", "Clair Épuré", Color(0xFFF8FAFC)),
+        Triple("doodle", "Doodle Stylisé", Color(0xFF1E293B))
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Wallpaper, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Fond d'écran du chat 🎨", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Chwazi yon koulè oswa yon stil pou background diskisyon sa a :",
+                    fontSize = 12.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                LazyColumn(modifier = Modifier.height(260.dp)) {
+                    items(wallpapers) { (key, label, color) ->
+                        val isSelected = currentKey == key
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = color,
+                            border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, JamesOnlineGreen) else null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable {
+                                    onSelectWallpaper(key)
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (key == "light") Color.Black else Color.White,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 13.5.sp
+                                )
+                                if (isSelected) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = JamesOnlineGreen
+                                    ) {
+                                        Text(
+                                            text = " ✓ Aktif ",
+                                            color = Color.White,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Fèmen")
+            }
+        }
+    )
+}
+
+@Composable
+fun StarredMessagesViewerDialog(
+    conversationId: String,
+    repository: JamesChatRepository,
+    currentLang: AppLanguage,
+    onDismiss: () -> Unit
+) {
+    val starredMessages by repository.dao.getStarredMessagesFlow().collectAsState(initial = emptyList())
+    val filteredStarred = remember(starredMessages, conversationId) {
+        val inChat = starredMessages.filter { it.conversationId == conversationId }
+        if (inChat.isNotEmpty()) inChat else starredMessages
+    }
+    val scope = rememberCoroutineScope()
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Messages favoris ⭐", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        },
+        text = {
+            if (filteredStarred.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Ou pa gen okenn mesaj favori pou kounye a.\nPeze lontan sou yon mesaj epi chwazi 'Ajouter aux favoris ⭐'.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(modifier = Modifier.height(300.dp)) {
+                    items(filteredStarred) { msg ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "@${msg.senderUsername}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    val time = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(msg.timestamp))
+                                    Text(text = time, fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = msg.text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    TextButton(
+                                        onClick = {
+                                            clipboard.setText(AnnotatedString(msg.text))
+                                            Toast.makeText(context, "Kopye nan clipboard", Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        Text("Kopye", fontSize = 11.sp)
+                                    }
+                                    TextButton(
+                                        onClick = {
+                                            scope.launch {
+                                                repository.toggleStarMessage(msg.id, false)
+                                            }
+                                        }
+                                    ) {
+                                        Text("Retire ⭐", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Fèmen")
+            }
+        }
+    )
+}
+
+@Composable
+fun CreatePollDialog(
+    onDismiss: () -> Unit,
+    onSubmitPoll: (question: String, options: List<String>) -> Unit
+) {
+    var question by remember { mutableStateOf("") }
+    var option1 by remember { mutableStateOf("") }
+    var option2 by remember { mutableStateOf("") }
+    var option3 by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Poll, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Créer un sondage 📊", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        },
+        text = {
+            Column {
+                Text("Posez une question à vos contacts ou au groupe :", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = question,
+                    onValueChange = { question = it },
+                    label = { Text("Question du sondage") },
+                    placeholder = { Text("Ex: Ki lè n ap rankontre ?") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("Options de vote :", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = option1,
+                    onValueChange = { option1 = it },
+                    label = { Text("Option 1") },
+                    placeholder = { Text("Ex: 10:00 AM 👍") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = option2,
+                    onValueChange = { option2 = it },
+                    label = { Text("Option 2") },
+                    placeholder = { Text("Ex: 2:00 PM ⏰") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = option3,
+                    onValueChange = { option3 = it },
+                    label = { Text("Option 3 (Optionnelle)") },
+                    placeholder = { Text("Ex: 6:00 PM 🌙") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val opts = listOf(option1, option2, option3).map { it.trim() }.filter { it.isNotEmpty() }
+                    if (question.isNotBlank() && opts.size >= 2) {
+                        onSubmitPoll(question.trim(), opts)
+                        onDismiss()
+                    }
+                },
+                enabled = question.isNotBlank() && option1.isNotBlank() && option2.isNotBlank()
+            ) {
+                Text("Publier le sondage")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
+}
+
+@Composable
+fun ShareLocationDialog(
+    onDismiss: () -> Unit,
+    onSelectLocation: (String) -> Unit
+) {
+    val presets = listOf(
+        "📍 Port-au-Prince, Haïti (18.5944° N, 72.3074° W)",
+        "📍 Pétion-Ville, Haïti (18.5125° N, 72.2853° W)",
+        "📍 Cap-Haïtien, Haïti (19.7587° N, 72.2014° W)",
+        "📍 Delmas, Haïti (18.5444° N, 72.2981° W)",
+        "📍 Carrefour, Haïti (18.5375° N, 72.4042° W)"
+    )
+    var customLoc by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFFEF4444))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Partager une localisation 📍", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        },
+        text = {
+            Column {
+                Text("Chwazi yon pozisyon oswa tape yon adrès :", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(10.dp))
+                presets.forEach { place ->
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 3.dp)
+                            .clickable {
+                                onSelectLocation(place)
+                                onDismiss()
+                            }
+                    ) {
+                        Text(
+                            text = place,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = customLoc,
+                    onValueChange = { customLoc = it },
+                    placeholder = { Text("Tape yon lòt adrès pèsonèl...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (customLoc.isNotBlank()) {
+                        onSelectLocation("📍 ${customLoc.trim()}")
+                        onDismiss()
+                    }
+                },
+                enabled = customLoc.isNotBlank()
+            ) {
+                Text("Voye pozisyon sa a")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
 }

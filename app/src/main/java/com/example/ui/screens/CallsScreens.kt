@@ -125,106 +125,6 @@ fun CallsListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Test & Simulation banner for incoming calls between accounts
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PhoneInTalk,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Test d'appel entrant réel",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Simulez la réception d'un appel audio/vidéo WebRTC",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    val demoCaller = allUsers.find { it.id != currentUser?.id } ?: UserEntity(
-                                        id = "usr_demo_caller",
-                                        email = "sarah.laurent@jameschat.ht",
-                                        username = "sarah_laurent",
-                                        firstName = "Sarah",
-                                        lastName = "Laurent",
-                                        avatarUrl = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
-                                    )
-                                    onSimulateIncomingCall?.invoke(demoCaller, false)
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("test_incoming_audio_call_btn"),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Appel Vocal", fontSize = 12.sp)
-                            }
-
-                            Button(
-                                onClick = {
-                                    val demoCaller = allUsers.find { it.id != currentUser?.id } ?: UserEntity(
-                                        id = "usr_demo_caller",
-                                        email = "james.designer@jameschat.ht",
-                                        username = "james_designer",
-                                        firstName = "James",
-                                        lastName = "Designer",
-                                        avatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-                                    )
-                                    onSimulateIncomingCall?.invoke(demoCaller, true)
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("test_incoming_video_call_btn"),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = JamesOnlineGreen
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Appel Vidéo", fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-            }
-
             if (callHistory.isEmpty()) {
                 item {
                     Box(
@@ -242,7 +142,7 @@ fun CallsListScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Aucun appel dans l'historique.\nDémarrez un appel ou testez la réception avec les boutons ci-dessus !",
+                                text = "Aucun appel dans l'historique.\nDémarrez un appel avec l'un de vos contacts !",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp,

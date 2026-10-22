@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,6 +38,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,16 +58,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.R
 import com.example.data.model.AppLanguage
 import com.example.data.repository.JamesChatRepository
@@ -91,9 +104,9 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showGoogleDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val context = LocalContext.current
     var selectedCountry by remember { mutableStateOf(com.example.util.JamesCountryUtil.findByCode("HT")) }
     var showCountryDialog by remember { mutableStateOf(false) }
 
@@ -115,12 +128,12 @@ fun LoginScreen(
                 size = 88.dp,
                 isVertical = true,
                 brandTextSize = 26.sp,
-                subtitle = JamesI18n.t("login_title", currentLang),
+                subtitle = if (currentLang == AppLanguage.KREYOL) "Konekte ak pwòp kont pa w" else "Connectez-vous à votre compte personnel",
                 animated = true,
                 withHalo = true
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Sélecteur de pays et indicatif téléphonique international
             Row(
@@ -144,7 +157,7 @@ fun LoginScreen(
                     )
                 }
                 Text(
-                    text = "Changer",
+                    text = if (currentLang == AppLanguage.KREYOL) "Chanje" else "Modifier",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -167,8 +180,8 @@ fun LoginScreen(
                     email = it
                     errorMessage = null
                 },
-                label = { Text("Email, @nom d'utilisateur ou ID James") },
-                placeholder = { Text("ex: user@mail.com, @jean, JMS-1042") },
+                label = { Text(if (currentLang == AppLanguage.KREYOL) "Email, nimewo telefòn, @username oswa ID James" else "Email, téléphone, @username ou ID James") },
+                placeholder = { Text(if (currentLang == AppLanguage.KREYOL) "ex: kont@mail.com, 37123456, @jean, JMS-1042" else "ex: compte@mail.com, +509..., @jean, JMS-1002") },
                 leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
@@ -192,7 +205,7 @@ fun LoginScreen(
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = "Afficher mot de passe"
+                            contentDescription = if (currentLang == AppLanguage.KREYOL) "Afiche modpas la" else "Afficher mot de passe"
                         )
                     }
                 },
@@ -224,7 +237,9 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                TextButton(onClick = { /* Reset password flow */ }) {
+                TextButton(onClick = {
+                    errorMessage = if (currentLang == AppLanguage.KREYOL) "Pou re-inisye modpas ou, tanpri kontakte asistans lan oswa itilize imel/nimewo w." else "Pour réinitialiser votre mot de passe, contactez l'assistance ou vérifiez vos identifiants."
+                }) {
                     Text(
                         text = JamesI18n.t("forgot_password", currentLang),
                         fontSize = 13.sp,
@@ -253,6 +268,10 @@ fun LoginScreen(
 
             Button(
                 onClick = {
+                    if (password.isBlank()) {
+                        errorMessage = if (currentLang == AppLanguage.KREYOL) "Tanpri antre modpas ou" else "Veuillez entrer votre mot de passe"
+                        return@Button
+                    }
                     scope.launch {
                         isLoading = true
                         errorMessage = null
@@ -267,7 +286,7 @@ fun LoginScreen(
                                 }
                             },
                             onFailure = { err ->
-                                errorMessage = err.message ?: "Erreur de connexion"
+                                errorMessage = err.message ?: if (currentLang == AppLanguage.KREYOL) "Erè pandan koneksyon an" else "Erreur de connexion"
                             }
                         )
                     }
@@ -283,65 +302,116 @@ fun LoginScreen(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
                     Text(
-                        text = JamesI18n.t("login_btn", currentLang),
+                        text = if (currentLang == AppLanguage.KREYOL) "Konekte ak pwòp kont mwen" else "Se connecter",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Text(
+                    text = if (currentLang == AppLanguage.KREYOL) " OSWA " else " OU ",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedButton(
-                onClick = { showGoogleDialog = true },
+                onClick = {
+                    scope.launch {
+                        isLoading = true
+                        errorMessage = null
+                        val result = repository.signInWithGoogle(context)
+                        isLoading = false
+                        result.fold(
+                            onSuccess = { user ->
+                                if (user.username.isEmpty()) {
+                                    onNavigateToChooseUsername()
+                                } else {
+                                    onLoginSuccess()
+                                }
+                            },
+                            onFailure = { err ->
+                                if (err !is GetCredentialCancellationException) {
+                                    errorMessage = err.message ?: if (currentLang == AppLanguage.KREYOL) "Erè pandan koneksyon ak Google" else "Erreur de connexion avec Google"
+                                }
+                            }
+                        )
+                    }
+                },
+                enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
-                    .testTag("google_login_btn"),
+                    .testTag("login_google_btn"),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    GoogleLogoIcon(size = 22.dp)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (currentLang == AppLanguage.KREYOL) "Kontinye ak Google" else "Continuer avec Google",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "🔒", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (currentLang == AppLanguage.KREYOL)
+                            "Koneksyon sekirize ak pwòp kont pa w. Pa gen okenn imèl admin k ap itilize."
+                        else
+                            "Connexion sécurisée à votre compte personnel. Vos identifiants restent protégés.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = onNavigateToSignup,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("go_to_signup_btn"),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = "🌐 ${JamesI18n.t("google_login", currentLang)}",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            if (showGoogleDialog) {
-                GoogleAccountSelectorDialog(
-                    onDismiss = { showGoogleDialog = false },
-                    onAccountSelected = { gEmail, gName, gPhoto ->
-                        showGoogleDialog = false
-                        scope.launch {
-                            isLoading = true
-                            errorMessage = null
-                            val res = repository.loginWithGoogle(
-                                email = gEmail,
-                                displayName = gName,
-                                photoUrl = gPhoto
-                            )
-                            isLoading = false
-                            res.fold(
-                                onSuccess = { u ->
-                                    if (u.username.isEmpty()) onNavigateToChooseUsername() else onLoginSuccess()
-                                },
-                                onFailure = { err -> errorMessage = err.message ?: "Erreur de connexion Google" }
-                            )
-                        }
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            TextButton(
-                onClick = onNavigateToSignup,
-                modifier = Modifier.testTag("go_to_signup_btn")
-            ) {
-                Text(
-                    text = JamesI18n.t("no_account", currentLang),
+                    text = if (currentLang == AppLanguage.KREYOL) "Ou poko gen kont ? Kreye pwòp kont pa w" else "Pas encore de compte ? S'inscrire",
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
                 )
             }
         }
@@ -355,15 +425,17 @@ fun SignupScreen(
     onNavigateToLogin: () -> Unit,
     onSignupSuccess: () -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var emailOrPhone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showGoogleDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val context = LocalContext.current
     var selectedCountry by remember { mutableStateOf(com.example.util.JamesCountryUtil.findByCode("HT")) }
     var showCountryDialog by remember { mutableStateOf(false) }
 
@@ -385,12 +457,12 @@ fun SignupScreen(
                 size = 76.dp,
                 isVertical = true,
                 brandTextSize = 24.sp,
-                subtitle = "Rejoignez la communauté de messagerie moderne",
+                subtitle = if (currentLang == AppLanguage.KREYOL) "Kreye pwòp kont pèsonèl ou" else "Créez votre compte personnel",
                 animated = true,
                 withHalo = true
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Sélecteur de pays et indicatif téléphonique international
             Row(
@@ -414,7 +486,7 @@ fun SignupScreen(
                     )
                 }
                 Text(
-                    text = "Changer",
+                    text = if (currentLang == AppLanguage.KREYOL) "Chanje" else "Modifier",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -431,13 +503,40 @@ fun SignupScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = firstName,
+                    onValueChange = { firstName = it; errorMessage = null },
+                    label = { Text(if (currentLang == AppLanguage.KREYOL) "Prenon" else "Prénom") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                OutlinedTextField(
+                    value = lastName,
+                    onValueChange = { lastName = it; errorMessage = null },
+                    label = { Text(if (currentLang == AppLanguage.KREYOL) "Non fanmi" else "Nom de famille") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             OutlinedTextField(
-                value = email,
+                value = emailOrPhone,
                 onValueChange = {
-                    email = it
+                    emailOrPhone = it
                     errorMessage = null
                 },
-                label = { Text(JamesI18n.t("email_label", currentLang)) },
+                label = { Text(if (currentLang == AppLanguage.KREYOL) "Email oswa nimewo telefòn" else "Email ou numéro de téléphone") },
+                placeholder = { Text(if (currentLang == AppLanguage.KREYOL) "ex: kont@mail.com oswa 37123456" else "ex: compte@mail.com ou +509...") },
                 leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
@@ -457,6 +556,14 @@ fun SignupScreen(
                 },
                 label = { Text(JamesI18n.t("password_label", currentLang)) },
                 leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (currentLang == AppLanguage.KREYOL) "Afiche modpas la" else "Afficher mot de passe"
+                        )
+                    }
+                },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
@@ -474,7 +581,7 @@ fun SignupScreen(
                     confirmPassword = it
                     errorMessage = null
                 },
-                label = { Text("Confirmer le mot de passe") },
+                label = { Text(if (currentLang == AppLanguage.KREYOL) "Konfime modpas la" else "Confirmer le mot de passe") },
                 leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 singleLine = true,
@@ -501,22 +608,58 @@ fun SignupScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = if (currentLang == AppLanguage.KREYOL) "✨ Pwòp idantite inik ou" else "✨ Votre identité unique",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (currentLang == AppLanguage.KREYOL)
+                            "Lè w enskri, w ap jwenn pwòp ID James pa w (ex: JAMES#4827), yon kòd inik 4 chif, ak pwòp espas prive w pou w kominike an sekirite."
+                        else
+                            "Lors de votre inscription, vous recevrez votre identifiant James unique (ex: JAMES#4827), un code à 4 chiffres et votre espace privé sécurisé.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = {
                     if (password != confirmPassword) {
-                        errorMessage = "Les mots de passe ne correspondent pas"
+                        errorMessage = if (currentLang == AppLanguage.KREYOL) "Modpas yo pa idantik" else "Les mots de passe ne correspondent pas"
+                        return@Button
+                    }
+                    if (emailOrPhone.isBlank()) {
+                        errorMessage = if (currentLang == AppLanguage.KREYOL) "Tanpri antre yon imel oswa yon nimewo telefòn" else "Veuillez entrer une adresse email ou un numéro de téléphone"
                         return@Button
                     }
                     scope.launch {
                         isLoading = true
                         errorMessage = null
-                        val result = repository.signup(email, password, country = selectedCountry.name)
+                        val result = repository.signup(
+                            emailOrPhone = emailOrPhone,
+                            password = password,
+                            firstName = firstName,
+                            lastName = lastName,
+                            country = selectedCountry.name
+                        )
                         isLoading = false
                         result.fold(
                             onSuccess = { onSignupSuccess() },
-                            onFailure = { err -> errorMessage = err.message ?: "Erreur d'inscription" }
+                            onFailure = { err -> errorMessage = err.message ?: (if (currentLang == AppLanguage.KREYOL) "Erè pandan enskripsyon an" else "Erreur lors de l'inscription") }
                         )
                     }
                 },
@@ -531,51 +674,75 @@ fun SignupScreen(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
                     Text(
-                        text = JamesI18n.t("signup_btn", currentLang),
+                        text = if (currentLang == AppLanguage.KREYOL) "Kreye pwòp kont mwen" else "Créer mon compte",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Text(
+                    text = if (currentLang == AppLanguage.KREYOL) " OSWA " else " OU ",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedButton(
-                onClick = { showGoogleDialog = true },
+                onClick = {
+                    scope.launch {
+                        isLoading = true
+                        errorMessage = null
+                        val result = repository.signInWithGoogle(context)
+                        isLoading = false
+                        result.fold(
+                            onSuccess = { user ->
+                                if (user.username.isEmpty()) {
+                                    onSignupSuccess()
+                                } else {
+                                    onSignupSuccess()
+                                }
+                            },
+                            onFailure = { err ->
+                                if (err !is GetCredentialCancellationException) {
+                                    errorMessage = err.message ?: if (currentLang == AppLanguage.KREYOL) "Erè pandan enskripsyon ak Google" else "Erreur d'inscription avec Google"
+                                }
+                            }
+                        )
+                    }
+                },
+                enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
                     .testTag("signup_google_btn"),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Text(
-                    text = "🌐 ${JamesI18n.t("google_login", currentLang)}",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            if (showGoogleDialog) {
-                GoogleAccountSelectorDialog(
-                    onDismiss = { showGoogleDialog = false },
-                    onAccountSelected = { gEmail, gName, gPhoto ->
-                        showGoogleDialog = false
-                        scope.launch {
-                            isLoading = true
-                            errorMessage = null
-                            val res = repository.loginWithGoogle(
-                                email = gEmail,
-                                displayName = gName,
-                                photoUrl = gPhoto
-                            )
-                            isLoading = false
-                            res.fold(
-                                onSuccess = { onSignupSuccess() },
-                                onFailure = { err -> errorMessage = err.message ?: "Erreur d'inscription Google" }
-                            )
-                        }
-                    }
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    GoogleLogoIcon(size = 22.dp)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (currentLang == AppLanguage.KREYOL) "Enskri rapid ak Google" else "Inscription rapide avec Google",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -585,7 +752,7 @@ fun SignupScreen(
                 modifier = Modifier.testTag("go_to_login_btn")
             ) {
                 Text(
-                    text = JamesI18n.t("has_account", currentLang),
+                    text = if (currentLang == AppLanguage.KREYOL) "Ou deja gen yon kont ? Konekte la a" else "Déjà un compte ? Connectez-vous ici",
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -748,132 +915,67 @@ fun ChooseUsernameScreen(
 }
 
 @Composable
-fun GoogleAccountSelectorDialog(
-    onDismiss: () -> Unit,
-    onAccountSelected: (email: String, displayName: String, photoUrl: String) -> Unit
-) {
-    var showCustomInput by remember { mutableStateOf(false) }
-    var customEmail by remember { mutableStateOf("") }
-    var customName by remember { mutableStateOf("") }
+fun GoogleLogoIcon(modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .background(Color.White, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.size(size * 0.85f)) {
+            val strokeW = this.size.width * 0.22f
+            val arcSize = Size(this.size.width - strokeW, this.size.height - strokeW)
+            val topLeft = Offset(strokeW / 2, strokeW / 2)
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "🌐", fontSize = 22.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Continuer avec Google", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (!showCustomInput) {
-                    Text(
-                        text = "Choisissez un compte pour continuer sur James Chat :",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onAccountSelected(
-                                    "hangington53@gmail.com",
-                                    "Hangington",
-                                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-                                )
-                            },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                    ) {
-                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            AvatarWithStatus(name = "Hangington", size = 40.dp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(text = "Hangington", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    JamesVBadge(size = 12.dp)
-                                }
-                                Text(text = "hangington53@gmail.com", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onAccountSelected(
-                                    "james.user@gmail.com",
-                                    "James User",
-                                    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"
-                                )
-                            },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                    ) {
-                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            AvatarWithStatus(name = "James User", size = 40.dp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(text = "James User", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text(text = "james.user@gmail.com", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = { showCustomInput = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text(text = "➕ Utiliser un autre compte Google", fontSize = 13.sp)
-                    }
-                } else {
-                    Text(
-                        text = "Connectez-vous avec votre adresse Google :",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    OutlinedTextField(
-                        value = customEmail,
-                        onValueChange = { customEmail = it },
-                        label = { Text("Adresse email Google") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = customName,
-                        onValueChange = { customName = it },
-                        label = { Text("Nom complet") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            if (showCustomInput) {
-                Button(
-                    onClick = {
-                        val trimmed = customEmail.trim()
-                        if (trimmed.isNotEmpty()) {
-                            val name = customName.trim().ifEmpty { trimmed.substringBefore("@") }
-                            onAccountSelected(trimmed, name, "")
-                        }
-                    },
-                    enabled = customEmail.contains("@")
-                ) {
-                    Text("Continuer")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Annuler")
-            }
+            // Red (top arc)
+            drawArc(
+                color = Color(0xFFEA4335),
+                startAngle = 180f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeW, cap = StrokeCap.Round)
+            )
+            // Yellow (left-bottom arc)
+            drawArc(
+                color = Color(0xFFFBBC05),
+                startAngle = 135f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeW, cap = StrokeCap.Round)
+            )
+            // Green (bottom arc)
+            drawArc(
+                color = Color(0xFF34A853),
+                startAngle = 45f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeW, cap = StrokeCap.Round)
+            )
+            // Blue (right arc)
+            drawArc(
+                color = Color(0xFF4285F4),
+                startAngle = -45f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeW, cap = StrokeCap.Round)
+            )
+            // Blue horizontal line in center
+            drawLine(
+                color = Color(0xFF4285F4),
+                start = Offset(this.size.width * 0.45f, this.size.height * 0.5f),
+                end = Offset(this.size.width * 0.95f, this.size.height * 0.5f),
+                strokeWidth = strokeW,
+                cap = StrokeCap.Round
+            )
         }
-    )
+    }
 }
+

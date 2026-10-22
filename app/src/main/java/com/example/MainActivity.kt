@@ -143,6 +143,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            LaunchedEffect(currentUser) {
+                if (currentUser == null && currentScreen != Screen.SPLASH && currentScreen != Screen.SIGNUP) {
+                    currentScreen = Screen.LOGIN
+                }
+            }
+
             JamesChatTheme(themeMode = themeMode) {
                 // Back handler for nested screens
                 BackHandler(enabled = currentScreen != Screen.MAIN && currentScreen != Screen.LOGIN) {
@@ -362,7 +368,8 @@ class MainActivity : ComponentActivity() {
                                 ProfileScreen(
                                     repository = repository,
                                     currentLang = currentLang,
-                                    onBack = { currentScreen = Screen.MAIN }
+                                    onBack = { currentScreen = Screen.MAIN },
+                                    onLogout = { currentScreen = Screen.LOGIN }
                                 )
                             }
 
@@ -374,7 +381,8 @@ class MainActivity : ComponentActivity() {
                                     onLogout = { currentScreen = Screen.LOGIN },
                                     onOpenWeb = { currentScreen = Screen.JAMES_WEB },
                                     onOpenAcademy = { currentScreen = Screen.JAMES_GAMES },
-                                    onOpenGames = { currentScreen = Screen.JAMES_GAMES }
+                                    onOpenGames = { currentScreen = Screen.JAMES_GAMES },
+                                    onOpenAdmin = { currentScreen = Screen.ADMIN }
                                 )
                             }
 
@@ -403,11 +411,15 @@ class MainActivity : ComponentActivity() {
                             }
 
                             Screen.ADMIN -> {
-                                AdminDashboardScreen(
-                                    repository = repository,
-                                    currentLang = currentLang,
-                                    onBack = { currentScreen = Screen.MAIN }
-                                )
+                                if (repository.isCurrentUserAdmin()) {
+                                    AdminDashboardScreen(
+                                        repository = repository,
+                                        currentLang = currentLang,
+                                        onBack = { currentScreen = Screen.MAIN }
+                                    )
+                                } else {
+                                    currentScreen = Screen.MAIN
+                                }
                             }
 
                             Screen.ACTIVE_CALL -> {

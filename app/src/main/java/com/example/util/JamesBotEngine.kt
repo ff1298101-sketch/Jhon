@@ -171,24 +171,18 @@ object JamesBotEngine {
                 val text = when (lang) {
                     AppLanguage.KREYOL ->
                         "📞 **ASISTANS & SIPÒ JAMES CHAT** :\n\n" +
-                        "• **Imèl Sipò** : support@jameschat.ht\n" +
-                        "• **Pwopriyetè Prensipal** : hangington53@gmail.com\n" +
-                        "• **Kopwopriyetè** : nopyoo21@gmail.com\n" +
-                        "• **Moderatè** : Lilmontero444@gmail.com & escanorliondelorgueil9@gmail.com\n\n" +
+                        "• **Imèl Sipò Ofisyèl** : support@jameschat.ht\n" +
+                        "• **Administrasyon & Sekirite** : admin@jameschat.ht\n\n" +
                         "📝 Si w rankontre yon pwoblèm oswa w vle rapòte yon abi, ou ka itilize bouton 'Signaler 🚨' dirèkteman nan meni mesaj la oswa pwofil la."
                     AppLanguage.ENGLISH ->
                         "📞 **JAMES CHAT OFFICIAL SUPPORT**:\n\n" +
                         "• **Support Email**: support@jameschat.ht\n" +
-                        "• **Primary Owner**: hangington53@gmail.com\n" +
-                        "• **Co-Owner**: nopyoo21@gmail.com\n" +
-                        "• **Moderation Admins**: Lilmontero444@gmail.com & escanorliondelorgueil9@gmail.com\n\n" +
+                        "• **Administration & Security**: admin@jameschat.ht\n\n" +
                         "📝 You can also report violations directly via the 'Signaler 🚨' option."
                     else ->
                         "📞 **ASSISTANCE OFFICIELLE JAMES CHAT** :\n\n" +
                         "• **Email Support** : support@jameschat.ht\n" +
-                        "• **Propriétaire Principal** : hangington53@gmail.com\n" +
-                        "• **Copropriétaire** : nopyoo21@gmail.com\n" +
-                        "• **Administrateurs Modération** : Lilmontero444@gmail.com & escanorliondelorgueil9@gmail.com\n\n" +
+                        "• **Administration & Sécurité** : admin@jameschat.ht\n\n" +
                         "📝 Vous pouvez également utiliser le bouton 'Signaler 🚨' sur n'importe quel message ou profil suspect pour un examen immédiat."
                 }
                 BotResponseResult(replyText = text, suggestedQuestions = listOf("/rules", "/profile", "Comment obtenir le V Badge ?"))
@@ -199,14 +193,14 @@ object JamesBotEngine {
                     AppLanguage.KREYOL -> listOf(
                         "🎮 **Devinèt James Bot** :\n« Mwen pèmèt ou koute vwa ak yon bèl ond sonò anime, chanje 50 lang diferan, epi chifre tout mesaj ou yo an sekirite. Ki moun mwen ye ? »\n👉 *Repons : Se James Chat !* 🇭🇹",
                         "🎯 **Defi Vitès & Idantite** :\nKi James Tag inik ou ye sou James Chat ? Ale nan pwofil ou, gade kòd 4 chif ou a (egz: JAMES#4827) epi pataje l ak zanmi w pou yo jwenn ou imedyatman !",
-                        "🧠 **Kwiz Kominote** :\nKonbyen pwopriyetè prensipal ofisyèl James Chat genyen ?\n👉 *Repons : 2 pwopriyetè (hangington53@gmail.com ak nopyoo21@gmail.com) ki gen kontwòl total sou platfòm nan !*",
+                        "🧠 **Kwiz Kominote** :\nKijan ou ka ajoute yon zanmi sou James Chat ?\n👉 *Repons : Avèk James Tag li, nom d'utilisateur li, kòd 4 chif li oswa scan QR Code li !*",
                         "🎲 **Mini-Jwèt Chif Sekrè** :\nChwazi yon chif ant 1 ak 10. Si w jwenn chif chans James Bot la (7), ou merite yon gwo bravo pou lespri w !",
                         "🧩 **Jwèt Kilti Kreyòl** :\n« Dèyè mòn gen... ? »\n👉 *Repons : Mòn ! Yon bèl pwovèb ayisyen ki montre kouraj ak pèseverans !* 💪"
                     )
                     AppLanguage.ENGLISH -> listOf(
                         "🎮 **James Bot Riddle**:\n\"I show animated sound waves when you speak, support 50 languages and protect your chats with end-to-end security. What am I?\"\n👉 *Answer: James Chat!*",
                         "🎯 **Tag Speed Challenge**:\nWhat is your unique 4-digit James Tag? Check your profile (e.g. JAMES#1234) and share your personal QR Code with friends!",
-                        "🧠 **Security Trivia**:\nWho are the official owners of James Chat?\n👉 *Answer: 2 owners (hangington53 and nopyoo21) with top administrative authority!*",
+                        "🧠 **Security Trivia**:\nHow do you connect securely with friends on James Chat?\n👉 *Answer: Using their unique James Tag, 4-digit code, @username or QR Code!*",
                         "🎲 **Lucky Number Game**:\nPick a number between 1 and 10. Can you guess James Bot's lucky digit? (It's 7!)"
                     )
                     AppLanguage.ESPANOL -> listOf(
@@ -217,7 +211,7 @@ object JamesBotEngine {
                     else -> listOf(
                         "🎮 **Devinette James Bot** :\n« Je permets d'écouter la voix avec une onde sonore animée en temps réel, de basculer entre 50 langues et de chiffrer les échanges. Qui suis-je ? »\n👉 *Réponse : James Chat !*",
                         "🎯 **Défi Vitesse & Identifiant** :\nQuel est votre identifiant Tag unique sur James Chat ? Allez dans votre profil et partagez votre code à 4 chiffres (ex: JAMES#4827) !",
-                        "🧠 **Quiz Sécurité & Gouvernance** :\nCombien de propriétaires officiels James Chat possède-t-il ?\n👉 *Réponse : 2 propriétaires principaux (hangington53@gmail.com et nopyoo21@gmail.com) avec contrôle complet !*",
+                        "🧠 **Quiz Sécurité & Gouvernance** :\nComment ajouter un contact de manière sécurisée sur James Chat ?\n👉 *Réponse : Grâce au James Tag unique, au nom d'utilisateur, au code à 4 chiffres ou au scan de QR Code !*",
                         "🎲 **Mini-Jeu du Chiffre Mystère** :\nChoisissez un chiffre entre 1 et 10. Si vous trouvez le chiffre secret de James Bot (7), vous remportez la médaille de perspicacité !"
                     )
                 }
@@ -471,7 +465,7 @@ object JamesBotEngine {
      */
     fun getDefaultKnowledgeBase(): List<BotKnowledgeEntity> {
         val now = System.currentTimeMillis()
-        val admin = "hangington53@gmail.com"
+        val admin = "admin@jameschat.ht"
         return listOf(
             BotKnowledgeEntity(
                 id = "kb_v_badge",
@@ -479,7 +473,7 @@ object JamesBotEngine {
                 question = "Comment obtenir le V Badge de vérification ?",
                 alternativeQuestions = "Comment être certifié, Avoir le badge bleu, Devenir vérifié, Badge V officiel, Certification James Chat",
                 keywords = "badge, vérifié, certification, v badge, officiel, certifier",
-                answer = "Le V Badge officiel de James Chat est attribué exclusivement par les propriétaires principaux (hangington53@gmail.com et nopyoo21@gmail.com) ainsi que les administrateurs de modération autorisés. Pour en faire la demande, votre profil doit être complet (photo, nom, bio) et respecter rigoureusement le règlement de la communauté. Contactez l'assistance via `/support`.",
+                answer = "Le V Badge officiel de James Chat est attribué par l'équipe de modération officielle et la gouvernance James Chat. Pour en faire la demande, votre profil doit être complet (photo, nom, bio) et respecter rigoureusement le règlement de la communauté. Contactez l'assistance via `/support`.",
                 language = "fr",
                 isPublished = true,
                 createdByAdminEmail = admin,
@@ -543,8 +537,8 @@ object JamesBotEngine {
                 category = "Administration",
                 question = "Qui sont les propriétaires et administrateurs de James Chat ?",
                 alternativeQuestions = "Qui dirige James Chat, Fondateur, Propriétaire, Admins officiels, Staff James Chat",
-                keywords = "proprietaire, owner, admin, hangington, nopyoo, lilmontero, escanor",
-                answer = "James Chat est sous l'autorité souveraine de ses deux Propriétaires Principaux :\n• hangington53@gmail.com (Propriétaire principal)\n• nopyoo21@gmail.com (Copropriétaire)\n\nLa modération est assurée par Lilmontero444@gmail.com et escanorliondelorgueil9@gmail.com. Toutes les opérations administratives sont strictement auditées et protégées côté serveur.",
+                keywords = "proprietaire, owner, admin, support, direction",
+                answer = "James Chat est sous l'autorité souveraine de son équipe de direction (admin@jameschat.ht et support@jameschat.ht). Toutes les opérations administratives sont strictement auditées et protégées côté serveur.",
                 language = "fr",
                 isPublished = true,
                 createdByAdminEmail = admin,

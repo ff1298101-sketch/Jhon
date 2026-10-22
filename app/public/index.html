@@ -1,133 +1,572 @@
 <!DOCTYPE html>
-<html lang="ht">
+<html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Telechaje James Chat APK</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body {
-      background: linear-gradient(135deg, #0b141a 0%, #111b21 100%);
-      color: #e9edef;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-    }
-    .card {
-      background: #1f2c34;
-      border-radius: 24px;
-      padding: 32px 24px;
-      max-width: 440px;
-      width: 100%;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    .logo-badge {
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, #00a884, #008069);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 38px;
-      margin: 0 auto 20px auto;
-      box-shadow: 0 8px 24px rgba(0, 168, 132, 0.4);
-    }
-    h1 {
-      font-size: 26px;
-      font-weight: 800;
-      color: #ffffff;
-      margin-bottom: 6px;
-    }
-    .subtitle {
-      font-size: 14px;
-      color: #8696a0;
-      margin-bottom: 24px;
-    }
-    .badge-info {
-      display: inline-block;
-      background: rgba(0, 168, 132, 0.15);
-      color: #00a884;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 24px;
-    }
-    .btn-download {
-      display: block;
-      background: #00a884;
-      color: #ffffff;
-      text-decoration: none;
-      padding: 18px 24px;
-      border-radius: 16px;
-      font-size: 18px;
-      font-weight: 700;
-      box-shadow: 0 8px 24px rgba(0, 168, 132, 0.4);
-      transition: all 0.2s ease;
-      margin-bottom: 20px;
-    }
-    .btn-download:hover {
-      background: #029072;
-      transform: translateY(-2px);
-    }
-    .steps {
-      background: rgba(255,255,255,0.03);
-      border-radius: 16px;
-      padding: 16px;
-      text-align: left;
-      font-size: 13px;
-      color: #8696a0;
-      line-height: 1.6;
-    }
-    .steps h3 {
-      color: #e9edef;
-      font-size: 14px;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .steps ol {
-      padding-left: 20px;
-    }
-    .steps li {
-      margin-bottom: 6px;
-    }
-    .footer {
-      margin-top: 24px;
-      font-size: 12px;
-      color: #667781;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>James Chat - Téléchargement Officiel APK & Portail</title>
+    <style>
+        :root {
+            --primary: #0284C7;
+            --primary-dark: #0369A1;
+            --accent: #10B981;
+            --bg: #0F172A;
+            --card-bg: #1E293B;
+            --text-main: #F8FAFC;
+            --text-sub: #94A3B8;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0B1120 0%, #0F172A 50%, #1E1B4B 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
+        }
+
+        .container {
+            max-width: 680px;
+            width: 100%;
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 36px 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            text-align: center;
+        }
+
+        .logo-badge {
+            width: 88px;
+            height: 88px;
+            background: linear-gradient(135deg, #0284C7, #38BDF8);
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 10px 25px rgba(2, 132, 199, 0.4);
+            font-size: 40px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: var(--text-sub);
+            margin-bottom: 28px;
+            line-height: 1.5;
+        }
+
+        .download-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 24px 16px;
+            margin-bottom: 28px;
+        }
+
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #0284C7, #0EA5E9);
+            color: white;
+            text-decoration: none;
+            font-size: 17px;
+            font-weight: 700;
+            padding: 16px 32px;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(2, 132, 199, 0.35);
+            transition: all 0.2s ease;
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(2, 132, 199, 0.5);
+        }
+
+        .apk-meta {
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            text-align: left;
+            margin-bottom: 28px;
+        }
+
+        @media (max-width: 520px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-item {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .feature-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #38BDF8;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .feature-desc {
+            font-size: 12px;
+            color: var(--text-sub);
+            line-height: 1.4;
+        }
+
+        .steps-box {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .steps-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .steps-list {
+            padding-left: 20px;
+            font-size: 13px;
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        .lang-switch {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .lang-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-sub);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        footer {
+            margin-top: 24px;
+            font-size: 12px;
+            color: var(--text-sub);
+            text-align: center;
+        }
+
+        /* FAQ ACCORDION STYLES */
+        .faq-section {
+            text-align: left;
+            margin-top: 8px;
+            margin-bottom: 24px;
+        }
+
+        .faq-header {
+            font-size: 16px;
+            font-weight: 800;
+            color: #38BDF8;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .accordion-item {
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .accordion-item:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+
+        .accordion-item[open] {
+            border-color: var(--primary);
+            background: rgba(15, 23, 42, 0.85);
+        }
+
+        .accordion-header {
+            padding: 14px 16px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-main);
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        .accordion-header::-webkit-details-marker {
+            display: none;
+        }
+
+        .accordion-header::after {
+            content: '＋';
+            font-size: 16px;
+            color: #38BDF8;
+            transition: transform 0.2s ease;
+            font-weight: bold;
+        }
+
+        .accordion-item[open] .accordion-header::after {
+            content: '−';
+            color: #10B981;
+        }
+
+        .accordion-content {
+            padding: 0 16px 14px 16px;
+            font-size: 13px;
+            color: var(--text-sub);
+            line-height: 1.6;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 10px;
+        }
+
+        .accordion-content ul {
+            padding-left: 20px;
+            margin-top: 6px;
+        }
+
+        .accordion-content li {
+            margin-bottom: 4px;
+        }
+
+        /* SUPPORT CONTACT CARD */
+        .contact-box {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.18) 0%, rgba(16, 185, 129, 0.18) 100%);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 18px;
+            text-align: left;
+        }
+
+        .contact-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #F8FAFC;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .contact-desc {
+            font-size: 12.5px;
+            color: var(--text-sub);
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .contact-emails {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .email-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: 12px;
+            color: #38BDF8;
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            width: fit-content;
+        }
+
+        .email-link:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateX(4px);
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+        }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo-badge">💬</div>
-    <h1>James Chat</h1>
-    <p class="subtitle">Aplikasyon Messagerie Android Konplè 🇭🇹</p>
-    <div class="badge-info">Fichye APK pare • 26 MB • Vèsyon 1.0</div>
 
-    <a href="/James-Chat.apk" download="James-Chat.apk" class="btn-download">
-      📲 Telechaje APK a Kounye a
-    </a>
-
-    <div class="steps">
-      <h3>📋 Kijan pou w enstale l :</h3>
-      <ol>
-        <li>Klike sou bouton vèt la pou w telechaje fichye <b>James-Chat.apk</b> sou telefòn ou.</li>
-        <li>Lè l fin telechaje, klike sou li pou w louvri l.</li>
-        <li>Si telefòn nan mande w otorizasyon, klike <b>"Otorize sous sa a"</b> (Autoriser la source).</li>
-        <li>Klike <b>"Enstale"</b> (Installer), epi ouvri James Chat !</li>
-      </ol>
+<div class="container">
+    <div class="lang-switch">
+        <button class="lang-btn active" onclick="setLang('fr')">🇫🇷 Français</button>
+        <button class="lang-btn" onclick="setLang('ht')">🇭🇹 Kreyòl Ayisyen</button>
     </div>
 
-    <p class="footer">Kreye avèk siksè • Google AI Studio Build</p>
-  </div>
+    <div class="logo-badge">💬</div>
+    <h1 id="title">James Chat</h1>
+    <p class="subtitle" id="subtitle">Messagerie moderne, sécurisée et complète avec certification V Badge officielle et annuaire multi-appareils.</p>
+
+    <div class="download-box">
+        <a href="/James-Chat.apk" download="James-Chat.apk" class="btn-download" id="downloadBtn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span id="btnText">Télécharger l'APK (26 MB)</span>
+        </a>
+        <div class="apk-meta" id="apkMeta">Version 1.0 • Fichier APK Android prêt à installer</div>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-item">
+            <div class="feature-title">🛡️ 5 Modèles V Badge</div>
+            <div class="feature-desc">V Classique, V Sceau, V Royal, V Diamant et V Hexagone avec validation administrative stricte.</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-title">🏷️ Système James ID</div>
+            <div class="feature-desc">5 méthodes vérifiées : James Tag (JAMES#XXXX), @username, James ID (JMS-XXXX), code 4 chiffres et QR Code.</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-title">👥 Gestion des Contacts</div>
+            <div class="feature-desc">Synchronisation temps réel, détection de doublons, persistance locale SQLite et suppression sécurisée.</div>
+        </div>
+        <div class="feature-item">
+            <div class="feature-title">⚡ Panneau Administrateur</div>
+            <div class="feature-desc">Accès protégé, revue des demandes V Badge, journal d'audit infalsifiable et contrôle des rôles.</div>
+        </div>
+    </div>
+
+    <div class="steps-box">
+        <div class="steps-title" id="stepsTitle">📱 Instructions d'installation sur Android :</div>
+        <ol class="steps-list" id="stepsList">
+            <li>Cliquez sur le bouton bleu ci-dessus pour télécharger <strong>James-Chat.apk</strong>.</li>
+            <li>Une fois le téléchargement terminé, appuyez sur la notification ou ouvrez le dossier <em>Téléchargements</em> de votre téléphone.</li>
+            <li>Si Android affiche un avertissement, choisissez <em>"Paramètres"</em> puis autorisez l'installation depuis cette source.</li>
+            <li>Appuyez sur <strong>Installer</strong> et profitez immédiatement de James Chat !</li>
+        </ol>
+    </div>
+
+    <!-- ACCORDION FAQ SECTION (PERMISSIONS & SÉCURITÉ) -->
+    <div class="faq-section" id="faqSection">
+        <div class="faq-header" id="faqHeader">
+            <span>❓ Foire Aux Questions (FAQ) • Permissions & Sécurité</span>
+        </div>
+
+        <details class="accordion-item" open>
+            <summary class="accordion-header" id="faqQ1">🔒 Pourquoi James Chat demande-t-il des permissions sur Android ?</summary>
+            <div class="accordion-content" id="faqA1">
+                James Chat requiert uniquement les autorisations indispensables au fonctionnement de vos conversations :
+                <ul>
+                    <li><strong>Microphone :</strong> Indispensable pour enregistrer des notes vocales et effectuer des appels audio HD en temps réel.</li>
+                    <li><strong>Caméra :</strong> Utilisée pour prendre des photos instantanées, filmer et participer à des appels vidéo WebRTC.</li>
+                    <li><strong>Stockage / Fichiers :</strong> Nécessaire pour envoyer ou télécharger des documents volumineux, photos HD et films complets.</li>
+                    <li><strong>Notifications :</strong> Permet de vous avertir immédiatement lors de la réception d'un appel ou d'un message entrant.</li>
+                </ul>
+                <em>Aucune donnée personnelle n'est accédée à votre insu ni transmise à des tiers.</em>
+            </div>
+        </details>
+
+        <details class="accordion-item">
+            <summary class="accordion-header" id="faqQ2">🛡️ Comment fonctionne le chiffrement de bout en bout (E2EE) ?</summary>
+            <div class="accordion-content" id="faqA2">
+                Chaque discussion, appel et transfert de média bénéficie d'une clé cryptographique unique générée localement sur votre téléphone. Seuls vous et votre interlocuteur possédez la clé permettant de déchiffrer les messages. Même en transit sur le réseau, vos communications sont parfaitement illisibles et inviolables.
+            </div>
+        </details>
+
+        <details class="accordion-item">
+            <summary class="accordion-header" id="faqQ3">⚠️ Pourquoi Android affiche un message "Source inconnue" lors de l'installation ?</summary>
+            <div class="accordion-content" id="faqA3">
+                C'est une alerte de sécurité standard d'Android lorsqu'une application est téléchargée directement sous forme d'APK en dehors du Play Store. Le fichier APK officiel fourni ici est 100% sûr, certifié par l'équipe James Chat et exempt de tout logiciel espion. Vous pouvez autoriser la source en toute confiance.
+            </div>
+        </details>
+
+        <details class="accordion-item">
+            <summary class="accordion-header" id="faqQ4">🔑 Comment sécuriser mon compte avec PIN, biométrie et 2FA ?</summary>
+            <div class="accordion-content" id="faqA4">
+                Dans les <em>Paramètres &gt; Sécurité &amp; Confidentialité</em>, vous pouvez activer à tout moment :
+                <ul>
+                    <li>Un <strong>code PIN à 4 chiffres</strong> requis lors de l'ouverture de l'application.</li>
+                    <li>Le <strong>déverrouillage biométrique</strong> par empreinte digitale ou scan facial.</li>
+                    <li>La <strong>vérification en deux étapes (2FA)</strong> à 6 chiffres pour blinder toute nouvelle connexion.</li>
+                </ul>
+            </div>
+        </details>
+
+        <details class="accordion-item">
+            <summary class="accordion-header" id="faqQ5">💻 Les sessions James Web sont-elles aussi sécurisées que l'application ?</summary>
+            <div class="accordion-content" id="faqA5">
+                Oui ! L'appairage avec votre navigateur sur ordinateur utilise un jeton cryptographique à 6 chiffres ou un QR Code dynamique. La session est synchronisée directement en local et peut être révoquée en un clic depuis votre téléphone à tout instant.
+            </div>
+        </details>
+
+        <!-- ASSISTANCE & CONTACT CARD -->
+        <div class="contact-box" id="contactBox">
+            <div class="contact-title" id="contactTitle">
+                <span>✉️ Besoin d'aide ou un problème ? Contactez-nous</span>
+            </div>
+            <p class="contact-desc" id="contactDesc">
+                Si vous rencontrez une difficulté lors de l'installation, un problème de permission ou une question de sécurité, notre équipe d'assistance est à votre disposition par e-mail :
+            </p>
+            <div class="contact-emails">
+                <a href="mailto:hangington53@gmail.com" class="email-link">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <span>hangington53@gmail.com</span>
+                </a>
+                <a href="mailto:Lilmontero444@gmail.com" class="email-link">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <span>Lilmontero444@gmail.com</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    James Chat &copy; 2026 • Port 8080 & 3000 • Prêt pour tous les appareils Android
+</footer>
+
+<script>
+    function setLang(lang) {
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        if (lang === 'ht') {
+            document.querySelectorAll('.lang-btn')[1].classList.add('active');
+            document.getElementById('subtitle').innerText = "Mesajri modèn, an sekirite e konplè avèk sètifikasyon V Badge ofisyèl ak anyè milti-aparèy.";
+            document.getElementById('btnText').innerText = "Telechaje fichye APK a (26 MB)";
+            document.getElementById('apkMeta').innerText = "Vèsyon 1.0 • Fichye APK Android pare pou enstale";
+            document.getElementById('stepsTitle').innerText = "📱 Enstriksyon pou w enstale l sou telefòn Android ou :";
+            document.getElementById('stepsList').innerHTML = `
+                <li>Klike sou bouton ble anlè a pou w telechaje <strong>James-Chat.apk</strong>.</li>
+                <li>Lè telechajman an fini, peze sou notifikasyon an oswa ale nan dosye <em>Téléchargements (Downloads)</em> sou telefòn ou.</li>
+                <li>Si telefòn nan mande pèmisyon, klike sou <em>"Paramètres"</em> epi aksepte enstalasyon sous sa a.</li>
+                <li>Klike sou <strong>Enstale (Installer)</strong> epi louvri James Chat touswit !</li>
+            `;
+            document.getElementById('faqHeader').innerHTML = "<span>❓ Kesyon yo poze souvan (FAQ) • Pèmisyon ak Sekirite</span>";
+            document.getElementById('faqQ1').innerText = "🔒 Poukisa James Chat mande pèmisyon sou Android ?";
+            document.getElementById('faqA1').innerHTML = `
+                James Chat mande sèlman pèmisyon ki nesesè pou w ka sèvi ak aplikasyon an :
+                <ul>
+                    <li><strong>Mikwofòn :</strong> Pou voye nòt vokal ak fè apèl odyo klè HD.</li>
+                    <li><strong>Kamera :</strong> Pou pran foto, anrejistre videyo epi fè apèl videyo an dirèk.</li>
+                    <li><strong>Depo / Fichye :</strong> Pou voye ak telechaje fim, gwo videyo ak dokiman san limit.</li>
+                    <li><strong>Notifikasyon :</strong> Pou w jwenn alèt touswit lè yon moun voye mesaj oswa fè w yon apèl.</li>
+                </ul>
+                <em>Nou pa janm pran pyès enfòmasyon pèsonèl san konsantman w.</em>
+            `;
+            document.getElementById('faqQ2').innerText = "🛡️ Kijan chifreman bout an bout (E2EE) la fonksyone ?";
+            document.getElementById('faqA2').innerText = "Tout mesaj, apèl ak fichye ou voye yo pwoteje avèk yon kle sekirite inik ki jenere sou telefòn ou. Se sèlman ou menm ak moun w ap pale a ki gen kle pou li mesaj yo. Menm sou entènèt la, pèsonn pa ka antre ladan yo.";
+            document.getElementById('faqQ3').innerText = "⚠️ Poukisa Android afiche yon avètisman pandan enstalasyon APK a ?";
+            document.getElementById('faqA3').innerText = "Android toujou mete yon mesaj sekirite estanda lè w telechaje yon APK dirèkteman sou entènèt. Fichye James-Chat.apk ofisyèl sa a 100% pwòp, verifye e an sekirite. Ou ka klike sou Paramètres epi aksepte sous la san kè sote.";
+            document.getElementById('faqQ4').innerText = "🔑 Kijan pou m pwoteje kont mwen ak kòd PIN, byometri ak 2FA ?";
+            document.getElementById('faqA4').innerHTML = `
+                Nan <em>Paramèt &gt; Sekirite &amp; Konfidansyalite</em>, ou ka mete :
+                <ul>
+                    <li>Yon <strong>kòd PIN 4 chif</strong> pou louvri aplikasyon an.</li>
+                    <li><strong>Dévérouyaj byometrik</strong> avèk anpwent oswa eskanè vizaj.</li>
+                    <li><strong>Verifikasyon an 2 etap (2FA)</strong> 6 chif pou bloke nenpòt koneksyon sispèk.</li>
+                </ul>
+            `;
+            document.getElementById('faqQ5').innerText = "💻 Èske sesyon James Web yo an sekirite menm jan an ?";
+            document.getElementById('faqA5').innerText = "Wi ! Koneksyon ak òdinatè a fèt avèk yon kòd sekirite 6 chif oswa yon kòd QR dinamik. Ou ka koupe nenpòt sesyon web dirèkteman sou telefòn ou nenpòt ki lè.";
+            document.getElementById('contactTitle').innerHTML = "<span>✉️ Èske w gen yon pwoblèm oswa yon kesyon ? Kontakte nou :</span>";
+            document.getElementById('contactDesc').innerText = "Si w rankontre nenpòt difikilte pandan enstalasyon an, yon pwoblèm pèmisyon oswa yon kesyon sekirite, ekip sipò James Chat la pare pou ede w pa imèl :";
+        } else {
+            document.querySelectorAll('.lang-btn')[0].classList.add('active');
+            document.getElementById('subtitle').innerText = "Messagerie moderne, sécurisée et complète avec certification V Badge officielle et annuaire multi-appareils.";
+            document.getElementById('btnText').innerText = "Télécharger l'APK (26 MB)";
+            document.getElementById('apkMeta').innerText = "Version 1.0 • Fichier APK Android prêt à installer";
+            document.getElementById('stepsTitle').innerText = "📱 Instructions d'installation sur Android :";
+            document.getElementById('stepsList').innerHTML = `
+                <li>Cliquez sur le bouton bleu ci-dessus pour télécharger <strong>James-Chat.apk</strong>.</li>
+                <li>Une fois le téléchargement terminé, appuyez sur la notification ou ouvrez le dossier <em>Téléchargements</em> de votre téléphone.</li>
+                <li>Si Android affiche un avertissement, choisissez <em>"Paramètres"</em> puis autorisez l'installation depuis cette source.</li>
+                <li>Appuyez sur <strong>Installer</strong> et profitez immédiatement de James Chat !</li>
+            `;
+            document.getElementById('faqHeader').innerHTML = "<span>❓ Foire Aux Questions (FAQ) • Permissions & Sécurité</span>";
+            document.getElementById('faqQ1').innerText = "🔒 Pourquoi James Chat demande-t-il des permissions sur Android ?";
+            document.getElementById('faqA1').innerHTML = `
+                James Chat requiert uniquement les autorisations indispensables au fonctionnement de vos conversations :
+                <ul>
+                    <li><strong>Microphone :</strong> Indispensable pour enregistrer des notes vocales et effectuer des appels audio HD en temps réel.</li>
+                    <li><strong>Caméra :</strong> Utilisée pour prendre des photos instantanées, filmer et participer à des appels vidéo WebRTC.</li>
+                    <li><strong>Stockage / Fichiers :</strong> Nécessaire pour envoyer ou télécharger des documents volumineux, photos HD et films complets.</li>
+                    <li><strong>Notifications :</strong> Permet de vous avertir immédiatement lors de la réception d'un appel ou d'un message entrant.</li>
+                </ul>
+                <em>Aucune donnée personnelle n'est accédée à votre insu ni transmise à des tiers.</em>
+            `;
+            document.getElementById('faqQ2').innerText = "🛡️ Comment fonctionne le chiffrement de bout en bout (E2EE) ?";
+            document.getElementById('faqA2').innerText = "Chaque discussion, appel et transfert de média bénéficie d'une clé cryptographique unique générée localement sur votre téléphone. Seuls vous et votre interlocuteur possédez la clé permettant de déchiffrer les messages. Même en transit sur le réseau, vos communications sont parfaitement illisibles et inviolables.";
+            document.getElementById('faqQ3').innerText = "⚠️ Pourquoi Android affiche un message \"Source inconnue\" lors de l'installation ?";
+            document.getElementById('faqA3').innerText = "C'est une alerte de sécurité standard d'Android lorsqu'une application est téléchargée directement sous forme d'APK en dehors du Play Store. Le fichier APK officiel fourni ici est 100% sûr, certifié par l'équipe James Chat et exempt de tout logiciel espion. Vous pouvez autoriser la source en toute confiance.";
+            document.getElementById('faqQ4').innerText = "🔑 Comment sécuriser mon compte avec PIN, biométrie et 2FA ?";
+            document.getElementById('faqA4').innerHTML = `
+                Dans les <em>Paramètres &gt; Sécurité &amp; Confidentialité</em>, vous pouvez activer à tout moment :
+                <ul>
+                    <li>Un <strong>code PIN à 4 chiffres</strong> requis lors de l'ouverture de l'application.</li>
+                    <li>Le <strong>déverrouillage biométrique</strong> par empreinte digitale ou scan facial.</li>
+                    <li>La <strong>vérification en deux étapes (2FA)</strong> à 6 chiffres pour blinder toute nouvelle connexion.</li>
+                </ul>
+            `;
+            document.getElementById('faqQ5').innerText = "💻 Les sessions James Web sont-elles aussi sécurisées que l'application ?";
+            document.getElementById('faqA5').innerText = "Oui ! L'appairage avec votre navigateur sur ordinateur utilise un jeton cryptographique à 6 chiffres ou un QR Code dynamique. La session est synchronisée directement en local et peut être révoquée en un clic depuis votre téléphone à tout instant.";
+            document.getElementById('contactTitle').innerHTML = "<span>✉️ Besoin d'aide ou un problème ? Contactez-nous</span>";
+            document.getElementById('contactDesc').innerText = "Si vous rencontrez une difficulté lors de l'installation, un problème de permission ou une question de sécurité, notre équipe d'assistance est à votre disposition par e-mail :";
+        }
+    }
+</script>
+
 </body>
 </html>

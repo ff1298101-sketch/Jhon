@@ -1,0 +1,27 @@
+{
+  "$schema": "https://firebase.google.com/schemas/firestore/blueprint/v1.json",
+  "entities": {
+    "User": {
+      "collection": "users",
+      "documentId": "userId",
+      "fields": {
+        "id": { "type": "string", "description": "User UID from Firebase Auth" },
+        "email": { "type": "string", "description": "User email address" },
+        "username": { "type": "string", "description": "Unique username" },
+        "firstName": { "type": "string", "description": "First name or display name" },
+        "lastName": { "type": "string", "description": "Last name" },
+        "avatarUrl": { "type": "string", "description": "Profile picture URL from Google" },
+        "role": { "type": "string", "description": "User role: OWNER, SUPER_ADMIN, ADMIN, MODERATOR, SUPPORT, USER" },
+        "isVerified": { "type": "boolean", "description": "Verification status" },
+        "createdAt": { "type": "timestamp", "description": "Account creation server timestamp" },
+        "updatedAt": { "type": "timestamp", "description": "Last profile update server timestamp" }
+      },
+      "access": {
+        "read": "request.auth != null",
+        "create": "request.auth != null && request.auth.uid == userId",
+        "update": "request.auth != null && request.auth.uid == userId",
+        "delete": "request.auth != null && request.auth.uid == userId"
+      }
+    }
+  }
+}

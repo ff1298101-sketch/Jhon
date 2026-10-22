@@ -211,7 +211,7 @@ fun JamesTopBar(
                         )
                         if (isAdmin) {
                             DropdownMenuItem(
-                                text = { Text(JamesI18n.t("tab_admin", currentLang)) },
+                                text = { Text("🛡️ ${JamesI18n.t("tab_admin", currentLang)}") },
                                 onClick = {
                                     showOptionsMenu = false
                                     onOpenAdmin()

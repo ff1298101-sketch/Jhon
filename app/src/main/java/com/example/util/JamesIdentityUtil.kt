@@ -6,68 +6,94 @@ import com.example.data.model.UserEntity
 import java.util.Random
 
 /**
- * Utility for James Chat 5-way unique identification:
- * 1. 4-digit code (e.g. "4827")
- * 2. Username (e.g. "@jamesdesigner")
- * 3. James ID (e.g. "JMS-4827")
- * 4. James Tag (e.g. "JAMES#4827") - Primary identifier
- * 5. QR Code containing URI "jameschat://user/<id>?tag=JAMES#<id>"
+ * Utility for James Chat 5-way unique identification and universal normalization:
+ * 1. James Tag (e.g. "JAMES#4827", "JAMES#0001", "JAMES#10023", etc.) - Identifiant Officiel Principal
+ * 2. James Custom ID (e.g. "JMS-4827")
+ * 3. Username (e.g. "@jamesdesigner" ou "jamesdesigner")
+ * 4. Code personnel d'identification (ex: "4827" ou tout identifiant numérique/alphanumérique valide)
+ * 5. QR Code deep-link URI "jameschat://user/<id>?code=...&tag=..."
  */
 object JamesIdentityUtil {
 
     /**
-     * Extracts or sanitizes a 4-digit identifier code (e.g. "4827").
+     * Normalise un identifiant brut en supprimant les espaces superflus, tabulations,
+     * et en gérant les majuscules/minuscules de manière cohérente.
      */
-    fun sanitizeFourDigitCode(raw: String): String? {
-        val digits = raw.filter { it.isDigit() }
-        return if (digits.length == 4) digits else null
+    fun normalizeRaw(input: String): String {
+        return input.trim()
+            .replace("\\s+".toRegex(), " ")
+            .replace("#\\s+".toRegex(), "#")
+            .replace("\\s+#".toRegex(), "#")
+            .replace("-\\s+".toRegex(), "-")
+            .replace("\\s+-".toRegex(), "-")
     }
 
     /**
-     * Returns the 4-digit code from any stored personalId or fourDigitCode.
-     * Guaranteed to be a 4-digit numeric string.
+     * Extrait et assainit le code numérique/alphanumérique d'un utilisateur.
+     * Compatible avec les codes à 4 chiffres historiques tout en supportant
+     * des identifiants personnalisés de longueur variable.
+     */
+    fun sanitizeCode(raw: String): String {
+        val clean = raw.trim().replace("\\s".toRegex(), "")
+        return if (clean.isNotEmpty()) clean else "1000"
+    }
+
+    /**
+     * Retourne l'identifiant code de l'utilisateur (historique 4 chiffres ou code personnalisé).
      */
     fun getFourDigitId(user: UserEntity): String {
-        val raw = if (user.fourDigitCode.isNotEmpty()) user.fourDigitCode else user.personalId
+        val raw = when {
+            user.fourDigitCode.isNotEmpty() -> user.fourDigitCode
+            user.personalId.isNotEmpty() -> user.personalId
+            else -> ""
+        }
         val digits = raw.filter { it.isDigit() }
-        if (digits.length == 4) return digits
-        // Derive deterministically from user ID if empty/legacy
+        if (digits.length >= 4) return digits
+        if (raw.isNotEmpty()) return raw
+        // Si vide, dérivation déterministe depuis l'ID utilisateur
         val hash = Math.abs(user.id.hashCode()) % 9000 + 1000
         return hash.toString()
     }
 
     /**
-     * Primary modern display identifier: JAMES#4827
+     * Identifiant principal officiel au format James Tag : "JAMES#4827"
      */
     fun getJamesTag(user: UserEntity): String {
-        return "JAMES#${getFourDigitId(user)}"
+        if (user.jamesTag.isNotEmpty() && user.jamesTag.startsWith("JAMES#", ignoreCase = true)) {
+            return user.jamesTag.uppercase()
+        }
+        return "JAMES#${getFourDigitId(user).uppercase()}"
     }
 
     /**
-     * Shareable custom James ID: JMS-4827
+     * Identifiant partageable James ID : "JMS-4827"
      */
     fun getJamesCustomId(user: UserEntity): String {
-        return "JMS-${getFourDigitId(user)}"
+        if (user.jamesCustomId.isNotEmpty() && user.jamesCustomId.startsWith("JMS-", ignoreCase = true)) {
+            return user.jamesCustomId.uppercase()
+        }
+        return "JMS-${getFourDigitId(user).uppercase()}"
     }
 
     /**
-     * Formatted username: @username
+     * Nom d'utilisateur formaté : "@username"
      */
     fun getFormattedUsername(user: UserEntity): String {
-        val u = user.username.removePrefix("@")
+        val u = user.username.removePrefix("@").trim()
         return "@$u"
     }
 
     /**
-     * Standard deep link / QR payload for direct user opening.
+     * Payload standard pour Deep Link et QR Code.
      */
     fun getQrPayload(user: UserEntity): String {
         val code = getFourDigitId(user)
-        return "jameschat://user/${user.id}?code=$code&tag=JAMES%23$code&username=${user.username}"
+        val tag = getJamesTag(user)
+        return "jameschat://user/${user.id}?code=$code&tag=${java.net.URLEncoder.encode(tag, "UTF-8")}&username=${user.username}"
     }
 
     /**
-     * Generates a clear, scannable QR Code bitmap for the user's profile.
+     * Génère un QR Code scannable de haute qualité pour le profil de l'utilisateur.
      */
     fun generateUserQrCodeBitmap(user: UserEntity, size: Int = 260): Bitmap {
         val payload = getQrPayload(user)
@@ -75,7 +101,7 @@ object JamesIdentityUtil {
         val grid = Array(matrixSize) { BooleanArray(matrixSize) }
         val random = Random(payload.hashCode().toLong())
 
-        // 1. Draw Corner Position Patterns (7x7 squares at 3 corners)
+        // Coins de localisation (motifs 7x7)
         fun drawFinderPattern(startX: Int, startY: Int) {
             for (r in 0..6) {
                 for (c in 0..6) {
@@ -90,13 +116,13 @@ object JamesIdentityUtil {
         drawFinderPattern(matrixSize - 7, 0)
         drawFinderPattern(0, matrixSize - 7)
 
-        // 2. Timing patterns
+        // Lignes de synchronisation
         for (i in 7 until matrixSize - 7) {
             grid[6][i] = (i % 2 == 0)
             grid[i][6] = (i % 2 == 0)
         }
 
-        // 3. Fill data bits seeded by content
+        // Données encodées
         for (r in 0 until matrixSize) {
             for (c in 0 until matrixSize) {
                 val inFinder1 = r < 8 && c < 8
@@ -110,7 +136,6 @@ object JamesIdentityUtil {
             }
         }
 
-        // 4. Render to Bitmap
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val moduleSize = size / matrixSize
         for (r in 0 until matrixSize) {
@@ -131,61 +156,117 @@ object JamesIdentityUtil {
     }
 
     /**
-     * Parses any input text or QR payload to determine candidate search terms.
+     * Analyse et normalise toute requête de recherche (QR, Tag, ID, code, @username).
+     * Gère toutes les variations de casse, d'espaces et de préfixes,
+     * sans imposer une longueur arbitraire de 4 chiffres.
      */
     fun parseContactQuery(raw: String): ContactSearchParams {
-        val trimmed = raw.trim()
+        val normalized = normalizeRaw(raw)
+        val trimmed = normalized.trim()
         val lower = trimmed.lowercase()
 
-        // 1. QR Code payload check
+        if (trimmed.isEmpty()) {
+            return ContactSearchParams(raw = raw, normalizedQuery = "")
+        }
+
+        // 1. Détection QR Code / Deep Link : jameschat://user/<id>?code=...
         if (lower.startsWith("jameschat://user/")) {
             val after = trimmed.substringAfter("jameschat://user/")
             val userId = after.substringBefore("?").trim()
-            val codeParam = Regex("[?&]code=([0-9]{4})").find(after)?.groupValues?.getOrNull(1)
+            val codeParam = Regex("[?&]code=([a-zA-Z0-9_]+)").find(after)?.groupValues?.getOrNull(1)
             val usernameParam = Regex("[?&]username=([a-zA-Z0-9_]+)").find(after)?.groupValues?.getOrNull(1)
+            val tagParam = Regex("[?&]tag=([^&]+)").find(after)?.groupValues?.getOrNull(1)?.let {
+                java.net.URLDecoder.decode(it, "UTF-8")
+            }
             return ContactSearchParams(
                 raw = trimmed,
+                normalizedQuery = userId,
                 exactUserId = userId.ifEmpty { null },
-                fourDigitCode = codeParam,
-                username = usernameParam,
+                candidateCode = codeParam,
+                candidateTag = tagParam,
+                username = usernameParam?.lowercase(),
                 isQrCode = true
             )
         }
 
-        // 2. James Tag check: "JAMES#4827" or "#4827"
+        // 2. Détection James Tag : "JAMES#4827", "james # 4827", "#4827", "JAMES#0001"
         if (lower.startsWith("james#") || lower.startsWith("#")) {
-            val num = trimmed.substringAfter("#").trim()
-            if (num.length == 4 && num.all { it.isDigit() }) {
-                return ContactSearchParams(raw = trimmed, fourDigitCode = num)
+            val code = trimmed.substringAfter("#").trim().replace("\\s".toRegex(), "")
+            if (code.isNotEmpty()) {
+                val fullTag = "JAMES#${code.uppercase()}"
+                return ContactSearchParams(
+                    raw = trimmed,
+                    normalizedQuery = fullTag,
+                    candidateTag = fullTag,
+                    candidateCode = code
+                )
             }
         }
 
-        // 3. James ID check: "JMS-4827" or "JMS4827"
+        // 3. Détection James ID : "JMS-4827", "jms 4827", "jms4827"
         if (lower.startsWith("jms-") || lower.startsWith("jms")) {
-            val num = trimmed.replace("(?i)jms-?".toRegex(), "").trim()
-            if (num.length == 4 && num.all { it.isDigit() }) {
-                return ContactSearchParams(raw = trimmed, fourDigitCode = num)
+            val code = trimmed.replace("(?i)jms-?\\s*".toRegex(), "").trim()
+            if (code.isNotEmpty()) {
+                val fullCustomId = "JMS-${code.uppercase()}"
+                val fullTag = "JAMES#${code.uppercase()}"
+                return ContactSearchParams(
+                    raw = trimmed,
+                    normalizedQuery = fullCustomId,
+                    candidateCustomId = fullCustomId,
+                    candidateTag = fullTag,
+                    candidateCode = code
+                )
             }
         }
 
-        // 4. 4-digit code check directly: "4827"
-        if (trimmed.length == 4 && trimmed.all { it.isDigit() }) {
-            return ContactSearchParams(raw = trimmed, fourDigitCode = trimmed)
-        }
-
-        // 5. Username check: "@jamesdesigner"
+        // 4. Détection Nom d'utilisateur avec arobase : "@jamesdesigner"
         if (trimmed.startsWith("@")) {
-            val clean = trimmed.removePrefix("@").trim()
-            return ContactSearchParams(raw = trimmed, username = clean)
+            val clean = trimmed.removePrefix("@").trim().lowercase()
+            return ContactSearchParams(
+                raw = trimmed,
+                normalizedQuery = clean,
+                username = clean
+            )
         }
 
-        return ContactSearchParams(raw = trimmed, generalQuery = trimmed)
+        // 5. Code numérique ou alphanumérique court (ex: "4827", "0001", "10023")
+        val isNumeric = trimmed.all { it.isDigit() }
+        if (isNumeric && trimmed.length in 3..10) {
+            val tag = "JAMES#${trimmed.uppercase()}"
+            val custom = "JMS-${trimmed.uppercase()}"
+            return ContactSearchParams(
+                raw = trimmed,
+                normalizedQuery = trimmed,
+                candidateCode = trimmed,
+                candidateTag = tag,
+                candidateCustomId = custom,
+                username = trimmed.lowercase(),
+                generalQuery = trimmed
+            )
+        }
+
+        // 6. Requête générale : nom d'utilisateur sans @ ou nom complet
+        val cleanUser = trimmed.lowercase()
+        val tagCandidate = "JAMES#${trimmed.uppercase()}"
+        val customCandidate = "JMS-${trimmed.uppercase()}"
+        return ContactSearchParams(
+            raw = trimmed,
+            normalizedQuery = cleanUser,
+            username = cleanUser,
+            candidateCode = trimmed,
+            candidateTag = tagCandidate,
+            candidateCustomId = customCandidate,
+            generalQuery = trimmed
+        )
     }
 
     data class ContactSearchParams(
         val raw: String,
+        val normalizedQuery: String = "",
         val exactUserId: String? = null,
-        val fourDigitCode: String? = null,
+        val candidateCode: String? = null,
+        val candidateTag: String? = null,
+        val candidateCustomId: String? = null,
         val username: String? = null,
         val generalQuery: String? = null,
         val isQrCode: Boolean = false

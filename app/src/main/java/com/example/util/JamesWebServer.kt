@@ -73,6 +73,11 @@ object JamesWebServer {
                 createContext("/api/send", SendMessageApiHandler(repository, context))
                 createContext("/api/upload", FileUploadApiHandler(repository, context))
                 createContext("/api/status", StatusApiHandler(repository))
+                createContext("/api/directory/resolve", DirectoryResolveApiHandler(repository))
+                createContext("/api/contacts", ContactsApiHandler(repository))
+                createContext("/api/contacts/add", AddContactApiHandler(repository))
+                createContext("/api/contacts/delete", DeleteContactApiHandler(repository))
+                createContext("/api/users/sync", UserSyncApiHandler(repository))
                 createContext("/files", FileStreamApiHandler(context))
                 start()
             }
@@ -472,6 +477,162 @@ object JamesWebServer {
             val bytes = obj.toString().toByteArray(Charsets.UTF_8)
             exchange.sendResponseHeaders(200, bytes.size.toLong())
             exchange.responseBody.use { it.write(bytes) }
+        }
+    }
+
+    private class DirectoryResolveApiHandler(private val repository: JamesChatRepository) : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
+            exchange.responseHeaders.set("Content-Type", "application/json")
+            exchange.responseHeaders.set("Access-Control-Allow-Origin", "*")
+            val query = exchange.requestURI.query ?: ""
+            val q = query.split("&").find { it.startsWith("q=") }?.substringAfter("q=") ?: ""
+            val decoded = java.net.URLDecoder.decode(q, "UTF-8").trim()
+            val responseObj = JSONObject()
+            if (decoded.isEmpty()) {
+                responseObj.put("found", false)
+            } else {
+                val user = kotlinx.coroutines.runBlocking { repository.findUserByContactMethod(decoded, searchRemote = false) }
+                if (user != null) {
+                    responseObj.put("found", true)
+                    responseObj.put("user", JSONObject().apply {
+                        put("id", user.id)
+                        put("email", user.email)
+                        put("username", user.username)
+                        put("firstName", user.firstName)
+                        put("lastName", user.lastName)
+                        put("bio", user.bio)
+                        put("avatarUrl", user.avatarUrl)
+                        put("profileVideoUrl", user.profileVideoUrl)
+                        put("fourDigitCode", user.fourDigitCode)
+                        put("jamesTag", user.jamesTag)
+                        put("jamesCustomId", user.jamesCustomId)
+                        put("isVerified", user.isVerified)
+                        put("verificationBadgeStyle", user.verificationBadgeStyle)
+                        put("role", user.role)
+                        put("isOnline", user.isOnline)
+                    })
+                } else {
+                    responseObj.put("found", false)
+                }
+            }
+            val bytes = responseObj.toString().toByteArray(Charsets.UTF_8)
+            exchange.sendResponseHeaders(200, bytes.size.toLong())
+            exchange.responseBody.use { it.write(bytes) }
+        }
+    }
+
+    private class ContactsApiHandler(private val repository: JamesChatRepository) : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
+            exchange.responseHeaders.set("Content-Type", "application/json")
+            exchange.responseHeaders.set("Access-Control-Allow-Origin", "*")
+            val query = exchange.requestURI.query ?: ""
+            val ownerId = query.split("&").find { it.startsWith("ownerId=") }?.substringAfter("ownerId=") ?: ""
+            val decodedOwner = java.net.URLDecoder.decode(ownerId, "UTF-8").trim()
+            val contacts = kotlinx.coroutines.runBlocking { repository.dao.getContacts(decodedOwner) }
+            val arr = JSONArray()
+            contacts.forEach { c ->
+                arr.put(JSONObject().apply {
+                    put("id", c.id)
+                    put("ownerId", c.ownerId)
+                    put("contactUserId", c.contactUserId)
+                    put("customSound", c.customSound)
+                    put("isBlocked", c.isBlocked)
+                    put("addedAt", c.addedAt)
+                })
+            }
+            val res = JSONObject().put("contacts", arr)
+            val bytes = res.toString().toByteArray(Charsets.UTF_8)
+            exchange.sendResponseHeaders(200, bytes.size.toLong())
+            exchange.responseBody.use { it.write(bytes) }
+        }
+    }
+
+    private class AddContactApiHandler(private val repository: JamesChatRepository) : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
+            exchange.responseHeaders.set("Content-Type", "application/json")
+            exchange.responseHeaders.set("Access-Control-Allow-Origin", "*")
+            val body = BufferedReader(InputStreamReader(exchange.requestBody)).readText()
+            val obj = JSONObject(body)
+            val ownerId = obj.optString("ownerId")
+            val contactUserId = obj.optString("contactUserId")
+            if (ownerId.isNotEmpty() && contactUserId.isNotEmpty()) {
+                kotlinx.coroutines.runBlocking {
+                    repository.dao.insertContact(
+                        com.example.data.model.ContactEntity(
+                            id = "${ownerId}_$contactUserId",
+                            ownerId = ownerId,
+                            contactUserId = contactUserId
+                        )
+                    )
+                }
+            }
+            val res = JSONObject().put("success", true).toString().toByteArray(Charsets.UTF_8)
+            exchange.sendResponseHeaders(200, res.size.toLong())
+            exchange.responseBody.use { it.write(res) }
+        }
+    }
+
+    private class DeleteContactApiHandler(private val repository: JamesChatRepository) : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
+            exchange.responseHeaders.set("Content-Type", "application/json")
+            exchange.responseHeaders.set("Access-Control-Allow-Origin", "*")
+            val body = BufferedReader(InputStreamReader(exchange.requestBody)).readText()
+            val obj = JSONObject(body)
+            val ownerId = obj.optString("ownerId")
+            val contactUserId = obj.optString("contactUserId")
+            if (ownerId.isNotEmpty() && contactUserId.isNotEmpty()) {
+                kotlinx.coroutines.runBlocking {
+                    repository.dao.deleteContact(ownerId, contactUserId)
+                }
+            }
+            val res = JSONObject().put("success", true).toString().toByteArray(Charsets.UTF_8)
+            exchange.sendResponseHeaders(200, res.size.toLong())
+            exchange.responseBody.use { it.write(res) }
+        }
+    }
+
+    private class UserSyncApiHandler(private val repository: JamesChatRepository) : HttpHandler {
+        override fun handle(exchange: HttpExchange) {
+            exchange.responseHeaders.set("Content-Type", "application/json")
+            exchange.responseHeaders.set("Access-Control-Allow-Origin", "*")
+            val body = BufferedReader(InputStreamReader(exchange.requestBody)).readText()
+            val obj = JSONObject(body)
+            val uid = obj.optString("id")
+            if (uid.isNotEmpty()) {
+                kotlinx.coroutines.runBlocking {
+                    val existing = repository.dao.getUserById(uid)
+                    val updated = if (existing != null) {
+                        existing.copy(
+                            firstName = obj.optString("firstName", existing.firstName),
+                            lastName = obj.optString("lastName", existing.lastName),
+                            isVerified = obj.optBoolean("isVerified", existing.isVerified),
+                            verificationBadgeStyle = obj.optString("verificationBadgeStyle", existing.verificationBadgeStyle),
+                            role = obj.optString("role", existing.role),
+                            avatarUrl = obj.optString("avatarUrl", existing.avatarUrl),
+                            profileVideoUrl = obj.optString("profileVideoUrl", existing.profileVideoUrl),
+                            bio = obj.optString("bio", existing.bio)
+                        )
+                    } else {
+                        com.example.data.model.UserEntity(
+                            id = uid,
+                            email = obj.optString("email", ""),
+                            username = obj.optString("username", ""),
+                            firstName = obj.optString("firstName", ""),
+                            lastName = obj.optString("lastName", ""),
+                            fourDigitCode = obj.optString("fourDigitCode", ""),
+                            jamesTag = obj.optString("jamesTag", ""),
+                            jamesCustomId = obj.optString("jamesCustomId", ""),
+                            isVerified = obj.optBoolean("isVerified", false),
+                            verificationBadgeStyle = obj.optString("verificationBadgeStyle", "SEAL"),
+                            role = obj.optString("role", "USER")
+                        )
+                    }
+                    repository.dao.insertUser(updated)
+                }
+            }
+            val res = JSONObject().put("success", true).toString().toByteArray(Charsets.UTF_8)
+            exchange.sendResponseHeaders(200, res.size.toLong())
+            exchange.responseBody.use { it.write(res) }
         }
     }
 
